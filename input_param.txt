@@ -1,0 +1,11 @@
+obsdir			/project/fas/nagai/uc24/a2146_gamer/fitsfiles/
+xraysb_obs		ff.img.e300_7000_bin3_all_obsids_box_excl_point_sources.fits
+xraysb_err		ff.img.e300_7000_bin3_all_obsids_box_0s_to_1s_no_bkg_subtr2_thresh.fits
+filenamedir		gamer_files.txt
+obs_file		kT_out.fits
+err_file		err_kT_out.fits
+fitsdir			tempproj
+simid			1
+testdatafile	Data_000001
+rescale			0
+makeplot		0

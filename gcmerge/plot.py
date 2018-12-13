@@ -5,7 +5,7 @@ from read_fits import open_fits, calibrate
 from scipy.interpolate import interp2d
 
 def plot(data, sim, time, angle, suffix=''):
-	fig, (ax1,ax2,ax3) = plt.subplots(nrows=1, ncols=3, sharey = True)	
+	fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3, sharey = True)	
 	plot1 = ax1.imshow(data, norm = matplotlib.colors.LogNorm(data[data>0].min(),data.max()))
 	rotimage, diff = rotate_image(data, sim, angle)
 	plot2 = ax2.imshow(rotimage, norm = matplotlib.colors.LogNorm(data[data>0].min(),data.max()))
