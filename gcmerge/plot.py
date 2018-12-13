@@ -14,7 +14,7 @@ def plot(data, sim, time, angle, suffix=''):
 	ax2.set_title(r'$\lambda\times$ Sim')
 	ax3.set_title(r'$\left(\frac{\lambda\times Sim - Obs}{\sigma_{obs}}\right)^2$')
 	fig.tight_layout()
-	print "Plots complete"
+	print( "Plots complete")
 	fig.colorbar(plot1, ax=ax1, shrink = 0.33)
 	fig.colorbar(plot1, ax=ax2, shrink = 0.33)
 	fig.colorbar(plot3, ax=ax3, shrink = 0.33)
@@ -35,12 +35,12 @@ def plotall(simfiles, startsnap=0, endsnap = None, suffix=''):
 		sy = calibrate(sdata.shape[1],sheader,axis=2)
 		sx -= sx.mean()
 		sy -= sy.mean()
-		print "Snap %d read in" % filenum
+		print( "Snap %d read in" % filenum)
 
 		#interpolate
 		f = interp2d(sx, sy, sdata)
 		binned_data = f(x,y)
-		print "Data binned"
+		print( "Data binned")
 		rolled_data = shift(binned_data, shift = bs[filenum])
 		l = np.nansum(data*rolled_data/errorsq)/np.nansum(rolled_data**2 / errorsq)
 		rolled_data *= l 
@@ -48,7 +48,7 @@ def plotall(simfiles, startsnap=0, endsnap = None, suffix=''):
 			rolled_data *= halomask
 			rolled_data[rolled_data == 0] = np.nan
 		plot(rolled_data, times[filenum], ba[filenum], suffix)
-		print "plot complete"
+		print( "plot complete")
 
 def plot_c2(label):
 	cs = np.load('chisq.npy')
