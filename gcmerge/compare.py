@@ -9,6 +9,8 @@ from . import inputs
 obsfile = inputs['obsdir'] + inputs['obs_file']
 errfile = inputs['obsdir'] + inputs['err_file']
 fitsdir = inputs['fitsdir']
+xraysb_obs = inputs['xraysb_obs']
+xraysb_err = inputs['xraysb_err']
 
 simfiles, times, data, errorsq, x, y, xp = init(obsfile, errfile, fitsdir)
 xraypeak = init(xraysb_obs, xraysb_err, 'rhoproj', peak_only)
