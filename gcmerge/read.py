@@ -42,12 +42,6 @@ def init(obsfile, errfile, simdir, peak_only=False):
 	data[data<0] = 0 #excessive background subtraction
 	print("Observation read in")
 
-	#select halo - currently manual
-	if select_halo:
-		minbrightness = 1.25e-5
-		halomask = np.ma.masked_greater(data, minbrightness).mask
-		data *= halomask
-	
 	#read_sim
 	simfiles = glob.glob(simdir+'/*fits')#xrayprojz/ on wiluna
 	simfiles.sort()
