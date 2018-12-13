@@ -4,7 +4,7 @@ from scipy.interpolate import interp2d
 from scipy.ndimage.interpolation import rotate, shift
 from skimage.feature import peak_local_max
 from .read import init, open_fits, calibrate
-from __init__ import inputs
+from . import inputs
 
 obsfile = inputs['obsdir'] + inputs['obs_file']
 errfile = inputs['obsdir'] + inputs['err_file']
