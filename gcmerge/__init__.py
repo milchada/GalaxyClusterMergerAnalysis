@@ -36,7 +36,7 @@ def init(obsfile, errfile, simdir):
 	range = data.max()/data[data>0].min()
 	xraypeak = np.argwhere(data == np.nanmax(data))
 	data[data<0] = 0 #excessive background subtraction
-	print "Observation read in"
+	print("Observation read in")
 
 	#select halo - currently manual
 	if select_halo:

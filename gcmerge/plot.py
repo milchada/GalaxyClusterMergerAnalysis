@@ -1,3 +1,8 @@
+import numpy as np
+import matplotlib.pylab as plt
+from matplotlib import colors
+from read_fits import open_fits, calibrate
+from scipy.interpolate import interp2d
 
 def plot(data, sim, time, angle, suffix=''):
 	fig, (ax1,ax2,ax3) = plt.subplots(nrows=1, ncols=3, sharey = True)	
@@ -17,7 +22,6 @@ def plot(data, sim, time, angle, suffix=''):
 	plt.show(block=False)
 	del(fig, ax1, ax2, ax3)
 	gc.collect()
-
 
 def plotall(simfiles, startsnap=0, endsnap = None, suffix=''):
 	if endsnap == None:

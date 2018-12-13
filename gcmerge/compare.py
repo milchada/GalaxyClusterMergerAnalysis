@@ -38,8 +38,8 @@ def best_rotation(data, image, offset, makeplot=False):
 		rotimagecut, diff = rotate_image(data, image, angle)
 		nvalidpix = len(np.ma.masked_invalid(diff).compressed())
 		chisq.append(np.nansum(diff)/nvalidpix)
-		# print "angle %d complete" % angle
-	print "offset (%d, %d) complete" % (xstep, ystep)
+		# print("angle %d complete" % angle
+	print("offset (%d, %d) complete" % (xstep, ystep))
 	best_angle = angles[chisq.index(min(chisq))]
 	if makeplot:
 		plot(image, times[filenum], best_angle) #so the angle info is stored in the image name
@@ -63,20 +63,20 @@ def match(simfiles, filenum, xraypeak, peak_threshold = 0.1, pixels_to_shift = 1
 		sy = calibrate(sdata.shape[1],sheader,axis=2)
 		sx -= sx.mean()
 		sy -= sy.mean()
-		print "Snap %d read in" % filenum
+		print("Snap %d read in" % filenum)
 
 		#interpolate
 		f = interp2d(sx, sy, sdata)
 		binned_data = f(x,y)
-		print "Data binned"
+		print("Data binned")
 
 		#align x-ray peaks
 		coords = peak_local_max(binned_data,threshold_rel=peak_threshold)
-		print len(coords), " peaks"
+		print(len(coords), " peaks")
 		coords -= xraypeak 
 		coords *= -1 #how much to shift by
 		rolled_data = shift(binned_data, shift = coords[0])
-		print "Xray peaks aligned"
+		print("Xray peaks aligned")
 		if select_halo:
 			rolled_data *= halomask
 			min_brightness = np.nanmax(rolled_data)/range
@@ -87,7 +87,7 @@ def match(simfiles, filenum, xraypeak, peak_threshold = 0.1, pixels_to_shift = 1
 		rolled_data *= l
 		
 		if len(coords) == 1:
-			print "System relaxed at snap %d. done!" % filenum
+			print("System relaxed at snap %d. done!" % filenum)
 			best_shifts[filenum] = coords
 			chisqs[filenum], best_angles[filenum] = best_rotation(data, rolled_data, (0,0,0), makeplot=makeplot)
 
@@ -120,9 +120,9 @@ def match(simfiles, filenum, xraypeak, peak_threshold = 0.1, pixels_to_shift = 1
 					minx, miny = np.argwhere(chisqs_around_peak1 == chisqs_around_peak1.min())[0]
 					best_shifts[filenum] = coords[0] - np.array([pixels_to_shift/2,pixels_to_shift/2]) + np.array([minx, miny])
 					chisqs[filenum], best_angles[filenum] = best_rotation(data, rolled_data, (minx, miny, pixels_to_shift/2), makeplot = makeplot)
-				print "done!"
+				print("done!")
 			else:
-				print "halos not merged yet. done!"
+				print("halos not merged yet. done!")
 				chisqs[filenum], best_angles[filenum] = best_rotation(data, rolled_data, (0,0,0), makeplot=makeplot)
 				best_shifts[filenum] = coords[0]
 
@@ -139,7 +139,7 @@ def match(simfiles, filenum, xraypeak, peak_threshold = 0.1, pixels_to_shift = 1
 			rolled_data *= l
 			chisqs_around_centroid = np.empty([pixels_to_shift*2,pixels_to_shift*2])
 			
-			"""cythonize/vectorise this nested loop"""
+			# """cythonize/vectorise this nested loop"""
 
 			for xstep in xrange(pixels_to_shift*2):
 				for ystep in xrange(pixels_to_shift*2):
@@ -154,17 +154,18 @@ def match(simfiles, filenum, xraypeak, peak_threshold = 0.1, pixels_to_shift = 1
 		np.save('best_angle%s' % suffix, best_angles)
 		
 	except (IOError, ValueError, IndexError):
-		print "Error in snap # ", filenum
+		print("Error in snap # ", filenum)
 
-cs = np.load('chisq_temp.npy')
-filestogo = np.argwhere(cs<1)
-filenums = [filestogo[i][0] for i in xrange(len(filestogo))]
-pool = Pool(10)
-for filenum in filenums:#np.argwhere(cs==0):
-	pool.apply_async(match, args=(simfiles, filenum, xraypeak), kwds=dict(suffix='_temp'))
+def comparetemp():
+	cs = np.load('chisq_temp.npy')
+	filestogo = np.argwhere(cs<1)
+	filenums = [filestogo[i][0] for i in xrange(len(filestogo))]
+	pool = Pool(10)
+	for filenum in filenums:#np.argwhere(cs==0):
+		pool.apply_async(match, args=(simfiles, filenum, xraypeak), kwds=dict(suffix='_temp'))
 
 
-def comparelens():
-	obsfile = 'A2146_WL_HSTcatalog/a2146.moderate_2Dbin_px170.dat'
-	errfile = '?'
+# def comparelens():
+# 	obsfile = 'A2146_WL_HSTcatalog/a2146.moderate_2Dbin_px170.dat'
+# 	errfile = '?'
 	
