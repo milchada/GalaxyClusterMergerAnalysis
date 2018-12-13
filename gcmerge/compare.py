@@ -13,7 +13,7 @@ xraysb_obs = inputs['xraysb_obs']
 xraysb_err = inputs['xraysb_err']
 
 simfiles, times, data, errorsq, x, y, xp = init(obsfile, errfile, fitsdir)
-xraypeak = init(xraysb_obs, xraysb_err, 'rhoproj', peak_only)
+xraypeak = init(xraysb_obs, xraysb_err, 'rhoproj', peak_only=True)
 
 def rotate_image(data, image, angle):
 	image[np.isnan(image)] = 0 #otherwise rotation gets fucked
