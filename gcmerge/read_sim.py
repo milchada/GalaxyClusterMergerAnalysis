@@ -2,7 +2,7 @@
 import yt
 import glob
 import os
-from __init__ import *
+from . import inputs
 
 with open(inputs['filenamedir']) as f:
 	a=f.readlines()

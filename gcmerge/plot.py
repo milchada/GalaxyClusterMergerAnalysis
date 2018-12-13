@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pylab as plt
 from matplotlib import colors
-from read_fits import open_fits, calibrate
+from .read import open_fits, calibrate
 from scipy.interpolate import interp2d
 
 def plot(data, sim, time, angle, suffix=''):
