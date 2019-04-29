@@ -1,19 +1,70 @@
 import numpy as np
-import gc, glob
+import glob, gc 
 from scipy.interpolate import interp2d
 from scipy.ndimage.interpolation import rotate, shift
 from skimage.feature import peak_local_max
-from .read import init, open_fits, calibrate
-from . import inputs
+from multiprocessing import Pool
+import matplotlib.pylab as plt
+from astropy import units, cosmology
+from astropy.io import fits
 
-obsfile = inputs['obsdir'] + inputs['obs_file']
-errfile = inputs['obsdir'] + inputs['err_file']
-fitsdir = inputs['fitsdir']
-xraysb_obs = inputs['obsdir'] + inputs['xraysb_obs']
-xraysb_err = inputs['obsdir'] + inputs['xraysb_err']
+def open_fits(filename, tablename):
+	f = fits.open(filename)
+	data = f[tablename].data
+	header = f[tablename].header
+	return data, header
+
+def calibrate(length, header, axis=1):
+	refpix = header['CRPIX'+str(axis)]
+	refval = header['CRVAL'+str(axis)]
+	step = header['CDELT'+str(axis)] 
+	values = np.empty(length)
+	for ind in range(length):
+		fitsind = ind+1
+		values[ind] = refval+(fitsind-refpix)*step
+	return values
+
+def init(obsfile, errfile, simdir, peak_only=False):
+	#read data
+	data, header = open_fits(obsfile, 0)
+	errorsq, errhead = open_fits(errfile, 0)
+	x = calibrate(data.shape[1],header,axis=1)
+	y = calibrate(data.shape[1],header,axis=2)
+	lcdm=cosmology.Planck15
+	z = 0.2323 #Abell 2146
+
+	#center
+	Mpc_rad = lcdm.angular_diameter_distance(z)
+	kpc_deg = Mpc_rad.to('kpc')/units.radian.in_units('degree')
+	x *= kpc_deg.value
+	y *= kpc_deg.value
+	x -= x.mean()
+	y -= y.mean()
+	#degrees to kpc
+	range = data.max()/data[data>0].min()
+	xraypeak = np.argwhere(data == np.nanmax(data))
+	data[data<0] = 0 #excessive background subtraction
+	print("Observation read in")
+
+	#read_sim
+	simfiles = glob.glob(simdir+'/*fits')#xrayprojz/ on wiluna
+	simfiles.sort()
+
+	times = np.arange(len(simfiles))/10.
+	if peak_only:
+		return xraypeak
+	else:
+		return simfiles, times, data, errorsq, x, y, xraypeak
+
+basedir = '/home/fas/nagai/uc24/scratch60/'
+obsfile = basedir+'kT_out.fits'#inputs['obsdir'] + inputs['obs_file']
+errfile = basedir+'err_kT_out.fits'#inputs['obsdir'] + inputs['err_file']
+fitsdir = 'fitsfiles/temp'#inputs['fitsdir']
+xraysb_obs = basedir+'ff.img.e300_7000_bin3_all_obsids_box_excl_point_sources.fits'#inputs['obsdir'] + inputs['xraysb_obs']
+xraysb_err = basedir+'ff.img.e300_7000_bin3_all_obsids_box_0s_to_1s_no_bkg_subtr2_thresh.fits'#inputs['obsdir'] + inputs['xraysb_err']
 
 simfiles, times, data, errorsq, x, y, xp = init(obsfile, errfile, fitsdir)
-xraypeak = init(xraysb_obs, xraysb_err, 'rhoproj', peak_only=True)
+xraypeak = init(xraysb_obs, xraysb_err, 'fitsfiles/xray_sb', peak_only=True)
 
 def rotate_image(data, image, angle):
 	image[np.isnan(image)] = 0 #otherwise rotation gets fucked
@@ -43,13 +94,13 @@ def best_rotation(data, image, offset):
 		# print("angle %d complete" % angle
 	print("offset (%d, %d) complete" % (xstep, ystep))
 	best_angle = angles[chisq.index(min(chisq))]
-	if int(inputs['makeplot']):
-		plot(image, times[filenum], best_angle) #so the angle info is stored in the image name
+	# if int(inputs['makeplot']):
+	# 	plot(image, times[filenum], best_angle) #so the angle info is stored in the image name
 	del(rotimagecut, imagecut)
 	gc.collect()
 	return min(chisq), best_angle
 
-def match(simfiles, filenum, xraypeak, peak_threshold = 0.1, pixels_to_shift = 10, suffix=''):
+def match(simfiles, filenum, xraypeak, peak_threshold = 0.7, pixels_to_shift = 10, suffix=''):
 	if glob.glob('chisq%s.npy' % suffix):
 		chisqs = np.load('chisq%s.npy' % suffix)
 		best_angles = np.load('best_angle%s.npy' % suffix)
@@ -84,11 +135,6 @@ def match(simfiles, filenum, xraypeak, peak_threshold = 0.1, pixels_to_shift = 1
 	l = np.nansum(data*rolled_data/errorsq)/np.nansum(rolled_data**2 / errorsq)
 	rolled_data *= l
 	
-	if len(coords) == 1:
-		print("System relaxed at snap %d. done!" % filenum)
-		best_shifts[filenum] = coords
-		chisqs[filenum], best_angles[filenum] = best_rotation(data, rolled_data, (0,0,0))
-
 	elif len(coords) == 2: 
 		if filenum > 12: #temp fix, by eye
 			chisqs_around_peak1 = np.zeros([pixels_to_shift,pixels_to_shift])
@@ -146,16 +192,9 @@ def match(simfiles, filenum, xraypeak, peak_threshold = 0.1, pixels_to_shift = 1
 	# except (IOError, ValueError, IndexError):
 	# 	print("Error in snap # ", filenum)
 
-def comparetemp():
-	cs = np.load('chisq_temp.npy')
-	filestogo = np.argwhere(cs<1)
-	filenums = [filestogo[i][0] for i in range(len(filestogo))]
+def compare():
 	pool = Pool(10)
-	for filenum in filenums:#np.argwhere(cs==0):
-		pool.apply_async(match, args=(simfiles, filenum, xraypeak), kwds=dict(suffix='_temp'))
-
-
-# def comparelens():
-# 	obsfile = 'A2146_WL_HSTcatalog/a2146.moderate_2Dbin_px170.dat'
-# 	errfile = '?'
-	
+	print(len(simfiles))
+	for filenum in range(len(simfiles)):#np.argwhere(cs==0):
+		# match(simfiles, filenum, xraypeak,suffix='_temp')
+		pool.apply_async(match, args=(simfiles, filenum, xraypeak))#, kwds=dict(suffix='_temp'))

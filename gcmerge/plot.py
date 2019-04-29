@@ -50,16 +50,10 @@ def plotall(simfiles, startsnap=0, endsnap = None, suffix=''):
 		plot(rolled_data, times[filenum], ba[filenum], suffix)
 		print( "plot complete")
 
-def plot_c2(label):
-	cs = np.load('chisq.npy')
-	cs[cs==0]=np.nan
-	times = np.load('times.npy')
-	simfiles = glob.glob('xrayprojz/*fits')
-	simfiles.sort()
-	snapnums = [int(file.split('proj_')[1].split('.fits')[0]) for file in simfiles]
-	times = times[snapnums]
-	plt.plot(times, cs, label=label)
-	plt.xlabel('t (Gyr)')
-	plt.ylabel(r'$\chi^2$')
-	plt.tight_layout()
-# GGM = Gaussian Gradient Magnitude - look up literature
+dir1 = '/home/fas/nagai/uc24/scratch60/'
+dir2 = '/project/fas/nagai/uc24/a2146_gamer/'
+
+def plot_c2():
+	os.chdir(dir1)
+	csfiles = glob.glob('./fitsfiles/*/chisq.npy')
+	
