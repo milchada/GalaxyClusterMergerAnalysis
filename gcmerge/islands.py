@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Turn a pixel list into a list of event islands.
 """
+import numpy as np
 
 class Pixel (object):
     """Single pixel.
@@ -62,25 +63,29 @@ class PixLine (object):
         for p in self.pixlist:
             p.island = isle
 
-def consecutive(data, stepsize=1):
-    return np.split(data, np.where(np.diff(data) != stepsize)[0]+1)
-
-def mkLines (pts):
-    """Sort pixel list into PixLines. Recall: pixlines have the same y
+def mkLines (pixlist):
+    """Sort pixel list into PixLines.
     """
-    segs = [np.unique(pts[pts[:,1] == y], axis=0)
-             for y in np.unique(pts[:,1])]
-    #but this lumps together points on opposite sides of curve minimum with same y
-
-    lines = []
-    for seg in segs:
-        # if len(seg) > 1: #this excludes too many points that are part of arcs large separations
-        y = seg[0][1]
-        subsegs = consecutive(seg[:,0])
-        for subseg in subsegs[::-1]:
-            lines.append(PixLine([Pixel((x, y)) for x in subseg]))
-    lines.sort()
-    return lines
+    # Pixels in ascending order
+    
+    linelist = []
+    line = None
+    ylast = -1
+    for pix in pixlist:
+        if pix.rawy != ylast or pix.rawx != xlast + 1:
+            # Beginning of a new line segment
+            if line:
+                # Save previous line
+                linelist.append (PixLine (line))
+            # Start a new line
+            line = [pix]
+            ylast = pix.rawy
+        else:
+            line.append (pix)
+        xlast = pix.rawx
+    if line:
+        linelist.append (PixLine (line))
+    return linelist
 
 class Island (object):
     """List of directly or indirectly adjacent PixLines.
@@ -105,7 +110,7 @@ class Island (object):
         jlen = len (v)
         while i < ilen and j < jlen:
             """This part sorts line segments by x value"""
-            if str(u[i]) < str(v[j]):
+            if u[i] < v[j]:
                 lnew.append (u[i])
                 i += 1
             else:
@@ -117,13 +122,7 @@ class Island (object):
             lnew += v[j:]
         self.lines = lnew
         if island.ymax > self.ymax:
-            self.ymax = other.ymax
-
-    def __str__ (self):
-        s = "{"
-        for t in self.lines:
-            s += str (t)
-        return s + "}"
+            self.ymax = island.ymax
 
     def adjacent (self, seg, maxsep=1):
         """Test if PixLine "overlaps" with any part of this island.
@@ -187,26 +186,3 @@ def mkIslands (linelist, maxsep = 1):
             islands.remove (isle)
         islands.append (newisle)
     return islands
-
-
-##########################OK I think this should now work for my array of points##################################
-
-if __name__ == "__main__":
-    # Read pixel data.
-    
-    pixin = pts #from find_features()
-
-    # Relies on input being sorted in ascending y, then x
-    lines = mkLines (pixin)
-    print "Number of line segments:", len (lines)
-
-    #this is the part that fails. are lines sorted?#
-    islandlist = mkIslands (lines)
-    print "Number of islands:", len (islandlist)
-
-    m = 0
-    for i in islandlist:
-        print i
-        m += i.count ()
-
-    print "Total number of pixels in islands:", m

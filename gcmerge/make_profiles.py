@@ -127,12 +127,12 @@ files = glob.glob('fitsfiles/xray_sb/*fits')
 files.sort()
 sb_edges, sb_img, sb_pts, sb_peak, resolution = find_features(16)
 
-##this part is currently very manual because SpectralClustering SUCKS
-##instead, get Paul's script running.
-cid = cluster(pts, nclusters = 7)
-feature = pts[cid == 1]
-sid = cluster(feature, nclusters = 4)
-bow = feature[sid == 0]
+from islands import mkLines, mkIslands
+
+ind = np.lexsort((pts[:,0],pts[:,1])) #i.e. sorted first by y, then by x
+pixlist = [Pixel(pt) for pt in pts[ind]]
+lines = mkLines (pixlist)
+islandlist = mkIslands (lines)
 
 def main(sb_img, img, bow):
 	centre = peak_local_max(sb_img, min_distance = 15)
