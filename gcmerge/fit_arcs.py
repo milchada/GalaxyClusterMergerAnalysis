@@ -6,6 +6,7 @@ from astropy.io import fits
 from astropy import constants
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_gradient_magnitude
+from scipy.interpolate import CubicSpline
 # from find_features import halfwidth, filter_edge
 
 files = glob.glob('fitsfiles/temp/*fits')
@@ -46,6 +47,23 @@ def circle_yneg(x, xm, ym, r):
 "In the step below, I'm sequentially scanning the pts array. But the points there aren't actually"
 "adjacent to each other. I want to use the direction of the gradient of the image at each point to"
 "select the next one"
+
+def find_midpoint(island):
+	curve_pts = np.array([island.lines[0].pixlist[0].rawx, island.lines[0].pixlist[0].rawy])
+	for line in island.lines:                                                                       
+    	for pix in line.pixlist:
+        	curve_pts = np.insert(curve_pts, -1, (pix.rawx,pix.rawy))
+    curve_pts = curve_pts[1:-1]
+    curve_pts = np.reshape(curve_pts, (len(curve_pts)/2,2))
+    x = np.unique(curve_pts[:,0])
+    y = curve_pts[:,1][[np.argwhere(curve_pts[:,0] == xi)[0][0] for xi in x]]  
+
+    "so this curvature depends on the orientation, fix that"
+    slope, shift = np.polyfit(curve_pts[:,0], curve_pts[:,1], 1)
+
+    "use the slope to tilt all the points"
+    cs = CubicSpine(x,y)
+    curve = cs(curve_pts[:,0], 1)
 
 def fit_arc(ax1, ax2, pts, peak, resolution, time):
 	numpoints = int(max_feature_length_kpc/resolution)	
@@ -101,15 +119,3 @@ def main():
 	fig2.colorbar(sm)
 	ax2[1][1].set_xlabel('X')
 	ax2[0][1].set_ylabel('Y')
-
-#now do this for a few snapshots
-#tile the results
-
-#to compare with observation
-#cold front, bow shock, upstream shock 
-#midpoint of each of these 
-#distance wrt main BCG i.e. potential mimimum
-#angles between these three vectors
-
-#easy to find midpoint of cold front - GGM peak
-#for shocks the leading point is the brightest 
