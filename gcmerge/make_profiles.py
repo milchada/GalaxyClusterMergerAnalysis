@@ -127,7 +127,7 @@ files = glob.glob('fitsfiles/xray_sb/*fits')
 files.sort()
 sb_edges, sb_img, sb_pts, sb_peak, resolution = find_features(16)
 
-from islands import mkLines, mkIslands
+from islands import Pixel, mkLines, mkIslands
 
 ind = np.lexsort((pts[:,0],pts[:,1])) #i.e. sorted first by y, then by x
 pixlist = [Pixel(pt) for pt in pts[ind]]
