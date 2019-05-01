@@ -134,13 +134,28 @@ pixlist = [Pixel(pt) for pt in pts[ind]]
 lines = mkLines (pixlist)
 islandlist = mkIslands (lines)
 
-def main(sb_img, img, bow):
-	centre = peak_local_max(sb_img, min_distance = 15)
-	centre = centre[0]
+def find_midpoint(island):
+	feature = islandlist[island]
+	points = np.array([feature.lines[0].pixlist[0].rawx, feature.lines[0].pixlist[0].rawy])
+	for line in features.lines:
+		for pix in features.pixlist:
+			points = np.insert(points, -1, (pix.rawx,pix.rawy))
+	points = points[1:-1]
+	points = np.reshape(points, (len(points)/2, 2))
+	ggm = gaussian_gradient_magnitude(img)
+	ggms = []
+	for point in points:
+		ggms.append(ggm[point[0]][point[1]])
+	return np.argmax(np.array(ggms))
+
+centre = peak_local_max(sb_img, min_distance = 15)
+centre = centre[0]
+
+def main():
 	theta = np.rad2deg(np.arctan2(bow[:,0] - centre[0], bow[:,1] - centre[1]))
 	theta[theta < 0] += 360
 	rad = np.mean(np.linalg.norm(bow - centre, axis=1))
-	w1 = patches.Wedge((centre[1], centre[0]), 1.2*rad, theta.min(), theta.max(),color='w', alpha=0.4)
+	w1 = patches.Wedge((centre[1], centre[0]), 1.2*rad, theta.min(), theta.max(), color='w', alpha=0.4)
 	
 	X,Y=np.mgrid[0:img.shape[1],0:img.shape[0]]
 	points = np.vstack((X.ravel(),Y.ravel())).T

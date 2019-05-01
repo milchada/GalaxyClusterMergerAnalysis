@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Turn a pixel list into a list of event islands.
 """
+
 class Pixel (object):
     """Single pixel.
     """

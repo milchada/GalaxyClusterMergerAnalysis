@@ -14,6 +14,7 @@ files.sort()
 
 mfp_a2146 = 23 #mean free path in kpc
 resolution = fits.getheader(files[0])['CDELT1']
+
 def find_features(filenum,isfile=True,type='temp'):
 	if isfile:
 		file = files[filenum]
@@ -44,28 +45,11 @@ def circle_yneg(x, xm, ym, r):
 	t[(x - xm)/r < -1] = np.arccos(-1)
 	return - r*np.sin(t) + ym
 
-"In the step below, I'm sequentially scanning the pts array. But the points there aren't actually"
-"adjacent to each other. I want to use the direction of the gradient of the image at each point to"
-"select the next one"
-
-def find_midpoint(island):
-	curve_pts = np.array([island.lines[0].pixlist[0].rawx, island.lines[0].pixlist[0].rawy])
-	for line in island.lines:                                                                       
-    	for pix in line.pixlist:
-        	curve_pts = np.insert(curve_pts, -1, (pix.rawx,pix.rawy))
-    curve_pts = curve_pts[1:-1]
-    curve_pts = np.reshape(curve_pts, (len(curve_pts)/2,2))
-    x = np.unique(curve_pts[:,0])
-    y = curve_pts[:,1][[np.argwhere(curve_pts[:,0] == xi)[0][0] for xi in x]]  
-
-    "so this curvature depends on the orientation, fix that"
-    slope, shift = np.polyfit(curve_pts[:,0], curve_pts[:,1], 1)
-
-    "use the slope to tilt all the points"
-    cs = CubicSpine(x,y)
-    curve = cs(curve_pts[:,0], 1)
-
 def fit_arc(ax1, ax2, pts, peak, resolution, time):
+	
+#this does the job but looks so ugly
+#is there really no simpler way?
+
 	numpoints = int(max_feature_length_kpc/resolution)	
 	norm = colors.Normalize(vmin = 1, vmax = numpoints)
 	cmap = cm.seismic
@@ -85,23 +69,24 @@ def fit_arc(ax1, ax2, pts, peak, resolution, time):
 				fit = curve_fit(circle_yneg, xdata[ydata < halfwidth], ydata[ydata < halfwidth], p0 = [halfwidth, halfwidth, guess])
 			if np.inf not in fit[1]: #i.e. fit impossible coz not an arc
 				cx, cy, r = fit[0]
-				xfit = np.arange(xdata.min(), xdata.max(), 0.1)
-				xyfit = np.empty([len(xfit), 2])
-				xyfit[:,0] = xfit
-				if len(ypos):
-					xyfit[:,1] = circle_ypos(xfit, cx, cy, r)
-				else:
-					xyfit[:,1] = circle_ypos(xfit, cx, cy, r)
-				del(xfit)
-			#sum of distances of points from fit
+				if (cx < img.shape[0]) & (cy < img.shape[1]):
+					xfit = np.arange(xdata.min(), xdata.max(), 0.1)
+					xyfit = np.empty([len(xfit), 2])
+					xyfit[:,0] = xfit
+					if len(ypos):
+						xyfit[:,1] = circle_ypos(xfit, cx, cy, r)
+					else:
+						xyfit[:,1] = circle_ypos(xfit, cx, cy, r)
+					del(xfit)
+					#sum of distances of points from fit
 
-			leastdist = np.linalg.norm(xyfit - feature[i], axis = 1)
-			ax1.scatter(n, sum(leastdist)/len(leastdist), c = 'k', marker = 'x')
-			ax2.scatter(cy, cx, c = cmap(norm(n)))
-			ax1.set_title('t = %0.1f Gyr' % time)
-			ax2.set_title('t = %0.1f Gyr' % time)
-			print(n, " done")
-		except RuntimeError:
+					leastdist = np.linalg.norm(xyfit - feature[i], axis = 1)
+					ax1.scatter(n, sum(leastdist)/len(leastdist), c = 'k', marker = 'x')
+					ax2.scatter(cy, cx, c = cmap(norm(n)))
+					ax1.set_title('t = %0.1f Gyr' % time)
+					ax2.set_title('t = %0.1f Gyr' % time)
+					print(n, " done")
+		except (RuntimeError, TypeError):
 			print(n, "no good fit")
 			continue
 
