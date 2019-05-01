@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 """Turn a pixel list into a list of event islands.
 """
-import numpy as np
-
 class Pixel (object):
     """Single pixel.
     """
