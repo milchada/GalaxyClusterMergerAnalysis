@@ -109,6 +109,7 @@ def find_features(filenum,isfile=True,type='temp'):
 	return img_edges, img, pts, peak, resolution 
 
 def radial_profile(data, center):
+	"""Make these emission weighted"""
     y, x = np.indices((data.shape))
     r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
     r = r.astype(np.int)
@@ -134,27 +135,33 @@ pixlist = [Pixel(pt) for pt in pts[ind]]
 lines = mkLines (pixlist)
 islandlist = mkIslands (lines)
 
-def find_midpoint(island):
+def find_points_above_contrast(island, mincontrast=1):
 	feature = islandlist[island]
 	points = np.array([feature.lines[0].pixlist[0].rawx, feature.lines[0].pixlist[0].rawy])
-	for line in features.lines:
-		for pix in features.pixlist:
+	for line in feature.lines:
+		for pix in line.pixlist:
 			points = np.insert(points, -1, (pix.rawx,pix.rawy))
 	points = points[1:-1]
 	points = np.reshape(points, (len(points)/2, 2))
-	ggm = gaussian_gradient_magnitude(img)
+	ggm = gaussian_gradient_magnitude(img, 1)
 	ggms = []
 	for point in points:
 		ggms.append(ggm[point[0]][point[1]])
-	return np.argmax(np.array(ggms))
+	ggms = np.array(ggms)
+	return points[np.argwhere( ggms >= mincontrast*ggms.max())]
+
+from fit_arcs import fit_arc
+
+fig, ax = plt.subplots(ncols=2)
+
 
 centre = peak_local_max(sb_img, min_distance = 15)
 centre = centre[0]
 
-def main():
-	theta = np.rad2deg(np.arctan2(bow[:,0] - centre[0], bow[:,1] - centre[1]))
+def main(feature,label,centre=centre):
+	theta = np.rad2deg(np.arctan2(feature[:,0] - centre[0], feature[:,1] - centre[1]))
 	theta[theta < 0] += 360
-	rad = np.mean(np.linalg.norm(bow - centre, axis=1))
+	rad = np.mean(np.linalg.norm(feature - centre, axis=1))
 	w1 = patches.Wedge((centre[1], centre[0]), 1.2*rad, theta.min(), theta.max(), color='w', alpha=0.4)
 	
 	X,Y=np.mgrid[0:img.shape[1],0:img.shape[0]]
@@ -165,4 +172,4 @@ def main():
 	wedge = img*grid.T
 	wedge[wedge == 0] = np.nan
 	profile = radial_profile(wedge, centre)
-	plt.plot(np.arange(len(profile)), profile)
+	plt.plot(np.arange(len(profile)), profile,label=label)

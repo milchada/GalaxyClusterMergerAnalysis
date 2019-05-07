@@ -27,8 +27,7 @@ def find_features(filenum,isfile=True,type='temp'):
 		img *= constants.k_B.to('keV K**-1').value
 	ggm = gaussian_gradient_magnitude(img[img_edges], sigma=mfp_a2146/resolution)
 
-	peak = np.argmax(ggm) #can do for more points than just this one 
-	return img_edges, img, pts, peak, resolution 
+	return img_edges, img, pts, ggm, resolution 
 
 center = (halfwidth, halfwidth)
 max_feature_length_kpc = 500
@@ -45,19 +44,22 @@ def circle_yneg(x, xm, ym, r):
 	t[(x - xm)/r < -1] = np.arccos(-1)
 	return - r*np.sin(t) + ym
 
-def fit_arc(ax1, ax2, pts, peak, resolution, time):
+def fit_arc(ax1, ax2, island, resolution, time):
 	
-#this does the job but looks so ugly
-#is there really no simpler way?
+	peak = find_points_above_contrast(island, 1)
 
 	numpoints = int(max_feature_length_kpc/resolution)	
 	norm = colors.Normalize(vmin = 1, vmax = numpoints)
 	cmap = cm.seismic
 
-	for n in range(1, numpoints):
+	arcfit = np.empty((18, 6))
+	i = -1
+	for mincontrast in np.arange(.9,0,-.05):
+		i += 1
+		arcfit[i,0] = mincontrast
 		try:
 			#select n points on either side of the central point
-			feature = pts[peak - n:peak + n + 1]
+			feature = find_points_above_contrast(island, mincontrast)[:,0]
 			xdata = feature[:,1]
 			ydata = feature[:,0]
 			ypos = ydata[ydata > halfwidth]
@@ -69,6 +71,7 @@ def fit_arc(ax1, ax2, pts, peak, resolution, time):
 				fit = curve_fit(circle_yneg, xdata[ydata < halfwidth], ydata[ydata < halfwidth], p0 = [halfwidth, halfwidth, guess])
 			if np.inf not in fit[1]: #i.e. fit impossible coz not an arc
 				cx, cy, r = fit[0]
+				arcfit[i, 1:5] = len(xdata), cx, cy, r
 				if (cx < img.shape[0]) & (cy < img.shape[1]):
 					xfit = np.arange(xdata.min(), xdata.max(), 0.1)
 					xyfit = np.empty([len(xfit), 2])
@@ -80,15 +83,20 @@ def fit_arc(ax1, ax2, pts, peak, resolution, time):
 					del(xfit)
 					#sum of distances of points from fit
 
-					leastdist = np.linalg.norm(xyfit - feature[i], axis = 1)
-					ax1.scatter(n, sum(leastdist)/len(leastdist), c = 'k', marker = 'x')
-					ax2.scatter(cy, cx, c = cmap(norm(n)))
+					leastdist = np.array([np.min(np.linalg.norm(xyfit - pt,axis=1)) for pt in feature])
+					arcfit[i, 5] = sum(leastdist)/len(leastdist)
+					ax1.scatter(mincontrast, sum(leastdist)/len(leastdist), c = 'k', marker = 'x')
+					ax2.scatter(cy, cx, c = cmap(mincontrast), lw=0)
 					ax1.set_title('t = %0.1f Gyr' % time)
 					ax2.set_title('t = %0.1f Gyr' % time)
-					print(n, " done")
-		except (RuntimeError, TypeError):
-			print(n, "no good fit")
+					print(mincontrast, " done")
+		except IndexError:
+			print(mincontrast, " not enough pts")
 			continue
+		except (RuntimeError, TypeError):
+			print(mincontrast, "no good fit")
+			continue
+	return arcfit
 
 def main():
 	fig1, ax1 = plt.subplots(nrows = 2, ncols = 3, sharex = True, sharey = True)
