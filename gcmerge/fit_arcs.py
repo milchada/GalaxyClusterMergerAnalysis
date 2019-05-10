@@ -6,29 +6,11 @@ from astropy.io import fits
 from astropy import constants
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_gradient_magnitude
-from scipy.interpolate import CubicSpline
-# from find_features import halfwidth, filter_edge
-
-files = glob.glob('fitsfiles/temp/*fits')
-files.sort()
 
 mfp_a2146 = 23 #mean free path in kpc
 resolution = fits.getheader(files[0])['CDELT1']
 
-def find_features(filenum,isfile=True,type='temp'):
-	if isfile:
-		file = files[filenum]
-	else:
-		file = filenum
-	img_edges, img = filter_edge(file, isfile=isfile)
-	pts = np.argwhere(img_edges)
-	
-	if type == 'temp':
-		img *= constants.k_B.to('keV K**-1').value
-	ggm = gaussian_gradient_magnitude(img[img_edges], sigma=mfp_a2146/resolution)
-
-	return img_edges, img, pts, ggm, resolution 
-
+halfwidth = 256
 center = (halfwidth, halfwidth)
 max_feature_length_kpc = 500
 
@@ -44,52 +26,58 @@ def circle_yneg(x, xm, ym, r):
 	t[(x - xm)/r < -1] = np.arccos(-1)
 	return - r*np.sin(t) + ym
 
+def fit_half(fn, xdata, ydata, p0):
+	fit = curve_fit(fn, xdata, ydata, p0 = p0)
+	xfit = np.arange(xdata.min(), xdata.max(), 1)
+	xyfit = np.empty([len(xfit), 2])
+	if np.inf not in fit[1]: #i.e. fit impossible coz not an arc
+		cx, cy, r = fit[0]
+		xyfit[:,0] = xfit
+		xyfit[:,1] = fn(xfit, cx, cy, r)
+	else:
+		xyfit[:,1] = np.nan
+		cx, cy, r = np.nan
+		print "arc is a bad fit"
+	return xyfit, cx, cy, r 
+
 def fit_arc(ax1, ax2, island, resolution, time):
-	
 	peak = find_points_above_contrast(island, 1)
-
-	numpoints = int(max_feature_length_kpc/resolution)	
-	norm = colors.Normalize(vmin = 1, vmax = numpoints)
 	cmap = cm.seismic
-
-	arcfit = np.empty((18, 6))
 	i = -1
+	arcfit = np.empty((18,6))
 	for mincontrast in np.arange(.9,0,-.05):
 		i += 1
 		arcfit[i,0] = mincontrast
 		try:
 			#select n points on either side of the central point
 			feature = find_points_above_contrast(island, mincontrast)[:,0]
+			guess = np.mean(np.linalg.norm(feature - center, axis = 1))
 			xdata = feature[:,1]
 			ydata = feature[:,0]
-			ypos = ydata[ydata > halfwidth]
-			guess = np.mean(np.linalg.norm(feature - center, axis = 1))
-			if len(ypos):
+			if len(ydata[ydata > halfwidth]):
 			#fit an arc to these points:
-				fit = curve_fit(circle_ypos, xdata[ydata > halfwidth], ydata[ydata > halfwidth], p0 = [halfwidth, halfwidth, guess])
-			else:
-				fit = curve_fit(circle_yneg, xdata[ydata < halfwidth], ydata[ydata < halfwidth], p0 = [halfwidth, halfwidth, guess])
-			if np.inf not in fit[1]: #i.e. fit impossible coz not an arc
-				cx, cy, r = fit[0]
-				arcfit[i, 1:5] = len(xdata), cx, cy, r
-				if (cx < img.shape[0]) & (cy < img.shape[1]):
-					xfit = np.arange(xdata.min(), xdata.max(), 0.1)
-					xyfit = np.empty([len(xfit), 2])
-					xyfit[:,0] = xfit
-					if len(ypos):
-						xyfit[:,1] = circle_ypos(xfit, cx, cy, r)
-					else:
-						xyfit[:,1] = circle_ypos(xfit, cx, cy, r)
-					del(xfit)
-					#sum of distances of points from fit
+				posfit, cx, cy, r = fit_half(circle_ypos, xdata[ydata > halfwidth], ydata[ydata > halfwidth], p0 = [halfwidth, halfwidth, guess])
+				xyfit = posfit
+			if len(ydata[ydata < halfwidth]):
+				negfit, cxn, cyn, rn = fit_half(circle_yneg, xdata[ydata < halfwidth], ydata[ydata < halfwidth], p0 = [halfwidth, halfwidth, guess])
+			if len(ydata[ydata > halfwidth]) & len(ydata[ydata < halfwidth]):
+				xyfit = np.vstack((posfit, negfit))
+				cx = (cx + cxn)/2.
+				cy = (cy + cyn)/2.
+				r = (r + rn)/2.
+			elif len(ydata[ydata < halfwidth]):
+				xyfit = negfit
+				cx, cy, r = cxn, cyn, rn
+			arcfit[i, 1:5] = len(feature), cx, cy, r 
+			#sum of distances of points from fit
 
-					leastdist = np.array([np.min(np.linalg.norm(xyfit - pt,axis=1)) for pt in feature])
-					arcfit[i, 5] = sum(leastdist)/len(leastdist)
-					ax1.scatter(mincontrast, sum(leastdist)/len(leastdist), c = 'k', marker = 'x')
-					ax2.scatter(cy, cx, c = cmap(mincontrast), lw=0)
-					ax1.set_title('t = %0.1f Gyr' % time)
-					ax2.set_title('t = %0.1f Gyr' % time)
-					print(mincontrast, " done")
+			leastdist = np.array([np.min(np.linalg.norm(xyfit - pt,axis=1)) for pt in feature])
+			arcfit[i, 5] = sum(leastdist)/len(leastdist)
+			ax1.scatter(mincontrast, sum(leastdist)/len(leastdist), c = 'k', marker = 'x')
+			ax2.scatter(cy, cx, c = cmap(mincontrast), lw=0)
+			ax1.set_title('t = %0.1f Gyr' % time)
+			ax2.set_title('t = %0.1f Gyr' % time)
+			print(mincontrast, " done")
 		except IndexError:
 			print(mincontrast, " not enough pts")
 			continue
@@ -98,17 +86,42 @@ def fit_arc(ax1, ax2, island, resolution, time):
 			continue
 	return arcfit
 
-def main():
-	fig1, ax1 = plt.subplots(nrows = 2, ncols = 3, sharex = True, sharey = True)
-	fig2, ax2 = plt.subplots(nrows = 2, ncols = 3, sharex = True, sharey = True)
-	for filenum in range(3,9):
-		pts, peak, resolution = find_features(filenum)
-		fit_arc(ax1.flatten()[filenum-3], ax2.flatten()[filenum-3], pts, peak, resolution, filenum/10. + 1)
-
-	ax1[1][1].set_xlabel('# points on either side of feature centre')
-	ax1[0][1].set_ylabel(r'$\chi^2_{red}$')
-	sm = cm.ScalarMappable(cmap=cm.seismic, norm=colors.Normalize(1, max_feature_length_kpc/resolution))
+def test_arcfits(island):
+	fig, ax = plt.subplots(ncols=2)
+	arcfit = fit_arc(ax[0], ax[1], island, resolution, 1.5)
+	plt.close()
+	fig, ax = plt.subplots()
+	sm = cm.ScalarMappable(cmap=cm.seismic, norm=colors.Normalize(0,1))
+	for row in range(len(arcfit)):
+		cx, cy, r = arcfit[row, 2:5]
+		feature = find_points_above_contrast(island, arcfit[row,0])[:,0]
+		xdata = feature[:,1]
+		ydata = feature[:,0]
+		xpos = xdata[ydata > halfwidth]
+		xneg = xdata[ydata < halfwidth]
+		if len(xpos):
+			xfit = np.arange(xpos.min(),xpos.max(),.1)
+			yfit_pos = circle_ypos(xfit, cx, cy, r)
+			plt.scatter(yfit_pos, xfit, c = sm.to_rgba(arcfit[row,0]), lw=0)
+		if len(xneg):
+			xfit = np.arange(xneg.min(),xneg.max(),.1)
+			yfit_neg = circle_yneg(xfit, cx, cy, r)
+			plt.scatter(yfit_neg, xfit, c = sm.to_rgba(arcfit[row,0]), lw=0)
+	plt.scatter(ydata, xdata, marker='x', c='k')
 	sm.set_array([])
-	fig2.colorbar(sm)
-	ax2[1][1].set_xlabel('X')
-	ax2[0][1].set_ylabel('Y')
+	fig.colorbar(sm)
+	plt.xlim(100,500)
+	plt.ylim(100,500)
+
+names = name = {1:'Cold Front', 3: 'Bow', 6: 'Swirl', 9: 'Upstream'}
+def arcfits_stability(islandnums=[1,3,6,9],names=names, time=1.5):
+	fig1, ax1 = plt.subplots()
+	for island in islandnums:
+		fig, ax = plt.subplots(ncols= 2)
+		arcfit = fit_arc(ax[0],ax[1],island, resolution, 1.5)
+		ax1.plot(arcfit[:,0], arcfit[:,-1], label=names[island])
+	handles, labels = ax1.get_legend_handles_labels()
+	ax1.legend(handles, labels)
+	ax1.set_xlabel('Contrast threshold')
+	ax1.set_ylabel(r'$\Sigma d_{min}$')
+	return fig1, ax1

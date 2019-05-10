@@ -5,7 +5,6 @@ from matplotlib.path import Path
 from matplotlib import cm, colors, patches
 from astropy.io import fits
 from skimage.feature import canny, peak_local_max
-from scipy.optimize import curve_fit
 from sklearn.cluster import KMeans
 from astropy import constants
 from scipy.ndimage import gaussian_gradient_magnitude
@@ -78,15 +77,6 @@ def filter_edge(file,plot=False, isfile=True,edgecontrast = 4, edge_threshold=0,
 	print("Edges found!")
 	return edge1, imcut
 
-from sklearn.cluster import SpectralClustering
-from sklearn.preprocessing import StandardScaler
-
-def cluster(features, nclusters=5):
-	X = StandardScaler().fit_transform(features)
-	model = SpectralClustering(n_clusters=nclusters, affinity='nearest_neighbors',
-		assign_labels='kmeans')
-	return model.fit_predict(X)
-
 files = glob.glob('fitsfiles/temp/*fits')
 files.sort()
 
@@ -110,15 +100,14 @@ def find_features(filenum,isfile=True,type='temp'):
 
 def radial_profile(data, center):
 	"""Make these emission weighted"""
-    y, x = np.indices((data.shape))
-    r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
-    r = r.astype(np.int)
-
-    keep = ~np.isnan(data.ravel())
-    tbin = np.bincount(r.ravel()[keep], data.ravel()[keep])
-    nr = np.bincount(r.ravel()[keep])
-    radialprofile = tbin / nr
-    return radialprofile 
+	y, x = np.indices((data.shape))
+	r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
+	r = r.astype(np.int)
+	keep = ~np.isnan(data.ravel())
+	tbin = np.bincount(r.ravel()[keep], data.ravel()[keep])
+	nr = np.bincount(r.ravel()[keep])
+	radialprofile = tbin / nr
+	return radialprofile 
 
 files = glob.glob('fitsfiles/temp/*fits')
 files.sort()
@@ -127,8 +116,6 @@ img_edges, img, pts, peak, resolution = find_features(5)
 files = glob.glob('fitsfiles/xray_sb/*fits')
 files.sort()
 sb_edges, sb_img, sb_pts, sb_peak, resolution = find_features(16)
-
-from islands import Pixel, mkLines, mkIslands
 
 ind = np.lexsort((pts[:,0],pts[:,1])) #i.e. sorted first by y, then by x
 pixlist = [Pixel(pt) for pt in pts[ind]]
@@ -149,8 +136,6 @@ def find_points_above_contrast(island, mincontrast=1):
 		ggms.append(ggm[point[0]][point[1]])
 	ggms = np.array(ggms)
 	return points[np.argwhere( ggms >= mincontrast*ggms.max())]
-
-from fit_arcs import fit_arc
 
 fig, ax = plt.subplots(ncols=2)
 
