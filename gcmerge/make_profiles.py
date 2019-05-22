@@ -13,7 +13,7 @@ halfwidth = 256
 peak_threshold = 0.9 #this really finds the right x-ray peak
 # smoothed_img = gaussian_filter(imcut, 1)
 
-def filter_edge(file,plot=False, isfile=True,edgecontrast = 4, edge_threshold=0, cut = False):
+def filter_edge(file,plot=False, isfile=True,edgecontrast = 2, edge_threshold=0, cut = False):
 	if isfile:
 		img = fits.open(file)[0].data
 	else:
@@ -77,13 +77,13 @@ def filter_edge(file,plot=False, isfile=True,edgecontrast = 4, edge_threshold=0,
 	print("Edges found!")
 	return edge1, imcut
 
-files = glob.glob('fitsfiles/temp/*fits')
+files = glob.glob('tempproj/*fits')#('fitsfiles/temp/*fits')
 files.sort()
 
 mfp_a2146 = 23 #mean free path in kpc
 resolution = fits.getheader(files[0])['CDELT1']
 
-def find_features(filenum,isfile=True,type='temp'):
+def find_features(filenum, isfile=True, type='temp'):
 	if isfile:
 		file = files[filenum]
 	else:
@@ -109,13 +109,13 @@ def radial_profile(data, center):
 	radialprofile = tbin / nr
 	return radialprofile 
 
-files = glob.glob('fitsfiles/temp/*fits')
+files = glob.glob('tempproj/*fits')#('fitsfiles/temp/*fits')
 files.sort()
-img_edges, img, pts, peak, resolution = find_features(5)
+img_edges, img, pts, peak, resolution = find_features(15)
 
-files = glob.glob('fitsfiles/xray_sb/*fits')
+files = glob.glob('xray_sb/*fits')#fitsfiles
 files.sort()
-sb_edges, sb_img, sb_pts, sb_peak, resolution = find_features(16)
+sb_edges, sb_img, sb_pts, sb_peak, resolution = find_features(15)
 
 ind = np.lexsort((pts[:,0],pts[:,1])) #i.e. sorted first by y, then by x
 pixlist = [Pixel(pt) for pt in pts[ind]]

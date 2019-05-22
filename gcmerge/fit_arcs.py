@@ -15,16 +15,20 @@ center = (halfwidth, halfwidth)
 max_feature_length_kpc = 500
 
 def circle_ypos(x, xm, ym, r):
-	t = np.arccos((x - xm)/r) #t in [0, pi]
-	t[(x - xm)/r > 1] = np.arccos(1)
-	t[(x - xm)/r < -1] = np.arccos(-1)
-	return r*np.sin(t) + ym
+	# t = np.arccos((x - xm)/r) #t in [0, pi]
+	# t[(x - xm)/r > 1] = np.arccos(1)
+	# t[(x - xm)/r < -1] = np.arccos(-1)
+	y = np.sqrt(r**2 - (x-xm)**2) + ym
+	y[np.ma.masked_invalid(y).mask] = ym
+	return y
 
 def circle_yneg(x, xm, ym, r):
-	t = np.arccos((x - xm)/r) #t in [0, pi]
-	t[(x - xm)/r > 1] = np.arccos(1)
-	t[(x - xm)/r < -1] = np.arccos(-1)
-	return - r*np.sin(t) + ym
+	# t = np.arccos((x - xm)/r) #t in [0, pi]
+	# t[(x - xm)/r > 1] = np.arccos(1)
+	# t[(x - xm)/r < -1] = np.arccos(-1)
+	y = - np.sqrt(r**2 - (x-xm)**2) + ym
+	y[np.ma.masked_invalid(y).mask] = ym
+	return y
 
 def fit_half(fn, xdata, ydata, p0):
 	fit = curve_fit(fn, xdata, ydata, p0 = p0)
@@ -36,7 +40,7 @@ def fit_half(fn, xdata, ydata, p0):
 		xyfit[:,1] = fn(xfit, cx, cy, r)
 	else:
 		xyfit[:,1] = np.nan
-		cx, cy, r = np.nan
+		cx = cy = r = np.nan
 		print "arc is a bad fit"
 	return xyfit, cx, cy, r 
 
