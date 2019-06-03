@@ -83,12 +83,12 @@ files.sort()
 mfp_a2146 = 23 #mean free path in kpc
 resolution = fits.getheader(files[0])['CDELT1']
 
-def find_features(filenum, isfile=True, type='temp'):
+def find_features(filenum, edgecontrast=4, isfile=True, type='temp'):
 	if isfile:
 		file = files[filenum]
 	else:
 		file = filenum
-	img_edges, img = filter_edge(file, isfile=isfile)
+	img_edges, img = filter_edge(file, edgecontrast=edgecontrast,isfile=isfile)
 	pts = np.argwhere(img_edges)
 	
 	if type == 'temp':
@@ -111,16 +111,16 @@ def radial_profile(data, center):
 
 files = glob.glob('tempproj/*fits')#('fitsfiles/temp/*fits')
 files.sort()
-img_edges, img, pts, peak, resolution = find_features(15)
+img_edges, img, pts, peak, resolution = find_features(18)
 
 files = glob.glob('xray_sb/*fits')#fitsfiles
 files.sort()
-sb_edges, sb_img, sb_pts, sb_peak, resolution = find_features(15)
+sb_edges, sb_img, sb_pts, sb_peak, resolution = find_features(18)
 
 ind = np.lexsort((pts[:,0],pts[:,1])) #i.e. sorted first by y, then by x
 pixlist = [Pixel(pt) for pt in pts[ind]]
 lines = mkLines (pixlist)
-islandlist = mkIslands (lines)
+islandlist = mkIslands (lines, 3)
 
 def find_points_above_contrast(island, mincontrast=1):
 	feature = islandlist[island]
@@ -136,9 +136,6 @@ def find_points_above_contrast(island, mincontrast=1):
 		ggms.append(ggm[point[0]][point[1]])
 	ggms = np.array(ggms)
 	return points[np.argwhere( ggms >= mincontrast*ggms.max())]
-
-fig, ax = plt.subplots(ncols=2)
-
 
 centre = peak_local_max(sb_img, min_distance = 15)
 centre = centre[0]

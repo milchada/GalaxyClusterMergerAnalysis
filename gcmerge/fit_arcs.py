@@ -2,6 +2,7 @@ import glob
 import numpy as np
 from matplotlib import pylab as plt, colors, cm
 from scipy import optimize
+import gc
 
 def calc_R(x,y, xc, yc):
     """ calculate the distance of each 2D points from the center (xc, yc) """
@@ -36,51 +37,56 @@ def fit_arc(island, time,ax1=None, ax2=None):
 			feature = find_points_above_contrast(island, mincontrast)[:,0]
 			xdata = feature[:,1]
 			ydata = feature[:,0]
-			arcfit[i, 1:5], leastdist = len(feature), leastsq_circle(xdata, ydata)
+			arcfit[i, 1] = len(feature)
+			fit = leastsq_circle(xdata, ydata)[:3]
+			arcfit[i, 2:5] = fit[:3]
 			#sum of distances of points from fit
-
-			arcfit[i, 5] = leastdist
-			if ax1:
-				ax1.scatter(mincontrast, sum(leastdist)/len(leastdist), c = 'k', marker = 'x')
-				ax2.scatter(cy, cx, c = cmap(mincontrast), lw=0)
-				ax1.set_title('t = %0.1f Gyr' % time)
-				ax2.set_title('t = %0.1f Gyr' % time)
+			arcfit[i, 5] = fit[-1]
+			del(fit, xdata, ydata, feature)
+			gc.collect()
+			# if ax1:
+			# 	ax1.scatter(mincontrast, sum(leastdist)/len(leastdist), c = 'k', marker = 'x')
+			# 	ax2.scatter(cy, cx, c = cmap(mincontrast), lw=0)
+			# 	ax1.set_title('t = %0.1f Gyr' % time)
+			# 	ax2.set_title('t = %0.1f Gyr' % time)
 			print(mincontrast, " done")
 		except IndexError:
 			print(mincontrast, " not enough pts")
 			continue
-		except (RuntimeError, TypeError):
+		except (RuntimeError):
 			print(mincontrast, "no good fit")
 			continue
 	return arcfit
 
-def test_arcfits(island):
-	fig, ax = plt.subplots(ncols=2)
-	arcfit = fit_arc(ax[0], ax[1], island, 1.5)
-	plt.close()
+def test_arcfits(island, showpts=True):
+	arcfit = fit_arc(island, 1.5)
 	fig, ax = plt.subplots()
 	sm = cm.ScalarMappable(cmap=cm.seismic, norm=colors.Normalize(0,1))
+	if showpts:
+		feature = find_points_above_contrast(island, 0)[:,0]
+		xdata = feature[:,1]
+		ydata = feature[:,0]
+		plt.scatter(ydata, xdata, marker='x', c='k')
 	for row in range(len(arcfit)):
 		cx, cy, r = arcfit[row, 2:5]
 		feature = find_points_above_contrast(island, arcfit[row,0])[:,0]
 		xdata = feature[:,1]
 		ydata = feature[:,0]
-		thetas = np.arctan2((ydata - cy)/(xdata - cx))
-		xfit = r*np.cos(thetas)
-		yfit = r*np.sin(thetas)
+		thetas = np.arctan2((ydata - cy),(xdata - cx))
+		xfit = r*np.cos(thetas) + cx
+		yfit = r*np.sin(thetas) + cy
 		plt.scatter(yfit, xfit, c = sm.to_rgba(arcfit[row,0]), lw=0)
-	plt.scatter(ydata, xdata, marker='x', c='k')
 	sm.set_array([])
 	fig.colorbar(sm)
-	plt.xlim(100,500)
-	plt.ylim(100,500)
+	plt.xlim(300,600)
+	plt.ylim(300,600)
 
 names = name = {1:'Cold Front', 3: 'Bow', 6: 'Swirl', 9: 'Upstream'}
 def arcfits_stability(islandnums=[1,3,6,9],names=names, time=1.5):
 	fig1, ax1 = plt.subplots()
 	for island in islandnums:
 		fig, ax = plt.subplots(ncols= 2)
-		arcfit = fit_arc(ax[0],ax[1],island, 1.5)
+		arcfit = fit_arc(island, 1.5)
 		ax1.plot(arcfit[:,0], arcfit[:,-1], label=names[island])
 	handles, labels = ax1.get_legend_handles_labels()
 	ax1.legend(handles, labels)
