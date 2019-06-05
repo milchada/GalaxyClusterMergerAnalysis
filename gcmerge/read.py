@@ -26,7 +26,7 @@ def init(obsfile, errfile, simdir, peak_only=False):
 	errorsq, errhead = open_fits(errfile, 0)
 	x = calibrate(data.shape[1],header,axis=1)
 	y = calibrate(data.shape[1],header,axis=2)
-	lcdm = cosmology.default_cosmology.get()
+	lcdm = cosmology.Planck15
 	z = 0.2323 #Abell 2146
 
 	#center
