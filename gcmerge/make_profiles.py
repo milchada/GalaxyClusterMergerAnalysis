@@ -1,89 +1,22 @@
+############################################
+# Plot radial profiles across each feature #
+############################################
+
 import glob
 import numpy as np 
 import matplotlib.pylab as plt
 from matplotlib.path import Path
-from matplotlib import cm, colors, patches
+from matplotlib import patches
 from astropy.io import fits
-from skimage.feature import canny, peak_local_max
-from sklearn.cluster import KMeans
+from skimage.feature import peak_local_max
 from astropy import constants
 from scipy.ndimage import gaussian_gradient_magnitude
-
-halfwidth = 256
-peak_threshold = 0.9 #this really finds the right x-ray peak
-# smoothed_img = gaussian_filter(imcut, 1)
-
-def filter_edge(file,plot=False, isfile=True,edgecontrast = 2, edge_threshold=0, cut = False):
-	if isfile:
-		img = fits.open(file)[0].data
-	else:
-		img = file
-	centre = peak_local_max(img,threshold_rel=peak_threshold)
-	if cut:
-		if len(centre) > 1:
-			#is there one peak or are there two?
-			kmeans = KMeans(n_clusters=1)
-			kmeans.fit(centre)
-			ccentres = kmeans.cluster_centers_
-			wss1 = np.mean(np.linalg.norm(centre - ccentres, axis=1))
-
-			kmeans = KMeans(n_clusters=2)
-			kmeans.fit(centre)
-			cid = kmeans.predict(centre)
-			ccentres = kmeans.cluster_centers_
-			wss2 = np.mean(np.linalg.norm(centre[cid==0] - ccentres[0], axis=1))
-			+np.mean(np.linalg.norm(centre[cid==1] - ccentres[1], axis=1))
-
-			if wss2 < wss1: #i.e. 2 clusters better fit
-				print("2 bright peaks")
-				bigger_cluster = np.argmax(np.bincount(cid))
-				centre = centre[cid == bigger_cluster] #subselect points around main cluster
-			centre = np.mean(centre,axis = 0)
-			centre = (int(centre[0]), int(centre[1]))
-
-		if type(centre[0]) != int:
-			centre = centre[0]
-		if (centre[0]-halfwidth) < 0:
-			left = 0
-			right = 2*halfwidth
-		elif (centre[0]+halfwidth) > img.shape[0]:
-			right = img.shape[0]
-			left = right - 2*halfwidth
-		else:
-			left, right = centre[0] - halfwidth, centre[0] + halfwidth
-		if (centre[1]-halfwidth) < 0:
-			bottom = 0
-			top = 2*halfwidth
-		elif (centre[1]+halfwidth) > img.shape[0]:
-			top = img.shape[0]
-			bottom = right - 2*halfwidth
-		else:
-			bottom, top = centre[1] - halfwidth, centre[1] + halfwidth
-		
-		imcut = img[left:right, bottom:top]
-	else:
-		dim = img.shape[0]
-		imcut = img[int(dim/4):int(3*dim/4), int(dim/4):int(3*dim/4)]
-		
-	edge1 = canny(np.log10(imcut), sigma=edgecontrast, high_threshold=edge_threshold)
-
-	if plot:
-		plt.imshow(imcut, cmap = cm.viridis, norm = colors.LogNorm(imcut.max()/1e4, imcut.max()))
-		plt.imshow(np.ma.masked_less(edge1*imcut, imcut.max()*peak_threshold), cmap = cm.gray_r, norm = colors.LogNorm(imcut.max()/1e4, imcut.max()))
-		
-		time = float(file.split('proj_')[1].split('.')[0])/10.
-		plt.title('%0.2f Gyr' % time)
-		plt.savefig('featuremaps/sq_weighted_%0.2f.png' % time)
-	print("Edges found!")
-	return edge1, imcut
-
-files = glob.glob('tempproj/*fits')#('fitsfiles/temp/*fits')
-files.sort()
+from find_features import filter_edge
 
 mfp_a2146 = 23 #mean free path in kpc
 resolution = fits.getheader(files[0])['CDELT1']
 
-def find_features(filenum, edgecontrast=4, isfile=True, type='temp'):
+def find_features(filenum, edgecontrast=4, isfile=True, type='temp', halfwidth = 256, peak_threshold = 0.9):
 	if isfile:
 		file = files[filenum]
 	else:
@@ -109,8 +42,8 @@ def radial_profile(data, center):
 	radialprofile = tbin / nr
 	return radialprofile 
 
-files = glob.glob('tempproj/*fits')#('fitsfiles/temp/*fits')
-files.sort()
+tempfiles = glob.glob('tempproj/*fits')#('fitsfiles/temp/*fits')
+tempfiles.sort()
 img_edges, img, pts, peak, resolution = find_features(18)
 
 files = glob.glob('xray_sb/*fits')#fitsfiles

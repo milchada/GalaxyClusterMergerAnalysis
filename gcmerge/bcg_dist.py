@@ -47,27 +47,30 @@ from find_peaks import find_peak
 files = glob.glob(os.getcwd()+'/fitsfiles/potential/zslice/*fits')
 files.sort()
 file = files[5]
-peaks = find_peak(file) #x1, y1, x2, y2 in pix
-if minima[0] < minima[1]:
-	peak1 = peaks[:2]
-	peak2 = peaks[2:]
-else:
-	peak1 = peaks[2:]
-	peak2 = peaks[:2]
 
-shift_pix = peak1 - bcg1_pix
-simfiles, times, data, errorsq, x, y, xp = init(obsfile, errfile, fitsdir)
-correction = bcg1_pix - xp
-bcg1_pix -= correction
-bcg2_pix -= correction
 
-sx = calibrate(img.shape[1],simhead,axis=1)
-sy = calibrate(img.shape[1],simhead,axis=2)
-sx -= sx.mean()
-sy -= sy.mean()
-f = interp2d(sx, sy, img)
-binned_data = f(x,y)
-rolled_data = shift(binned_data, shift = coords[0])
-rotate_angle = angle(bcg2_pix, bcg1_pix) - angle(peaks2, peaks1)
-#how to map pix in sim to pix in obs
-distance = np.linalg.norm(peaks[2:] - peaks[:2], axis=0) * fits.getheader(files[0])['CDELT1'] #kpc
+def bcg_separation(file):	
+	peaks = find_peak(file) #x1, y1, x2, y2 in pix
+	if minima[0] < minima[1]:
+		peak1 = peaks[:2]
+		peak2 = peaks[2:]
+	else:
+		peak1 = peaks[2:]
+		peak2 = peaks[:2]
+
+	shift_pix = peak1 - bcg1_pix
+	simfiles, times, data, errorsq, x, y, xp = init(obsfile, errfile, fitsdir)
+	correction = bcg1_pix - xp
+	bcg1_pix -= correction
+	bcg2_pix -= correction
+
+	sx = calibrate(img.shape[1],simhead,axis=1)
+	sy = calibrate(img.shape[1],simhead,axis=2)
+	sx -= sx.mean()
+	sy -= sy.mean()
+	f = interp2d(sx, sy, img)
+	binned_data = f(x,y)
+	rolled_data = shift(binned_data, shift = coords[0])
+	rotate_angle = angle(bcg2_pix, bcg1_pix) - angle(peaks2, peaks1)
+	#how to map pix in sim to pix in obs
+	return np.linalg.norm(peaks[2:] - peaks[:2], axis=0) * fits.getheader(files[0])['CDELT1']*u.kpc, rot_angle, coords[0] #kpc

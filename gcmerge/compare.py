@@ -7,54 +7,7 @@ from multiprocessing import Pool
 import matplotlib.pylab as plt
 from astropy import units, cosmology
 from astropy.io import fits
-
-def open_fits(filename, tablename):
-	f = fits.open(filename)
-	data = f[tablename].data
-	header = f[tablename].header
-	return data, header
-
-def calibrate(length, header, axis=1):
-	refpix = header['CRPIX'+str(axis)]
-	refval = header['CRVAL'+str(axis)]
-	step = header['CDELT'+str(axis)] 
-	values = np.empty(length)
-	for ind in range(length):
-		fitsind = ind+1
-		values[ind] = refval+(fitsind-refpix)*step
-	return values
-
-def init(obsfile, errfile, simdir, peak_only=False):
-	#read data
-	data, header = open_fits(obsfile, 0)
-	errorsq, errhead = open_fits(errfile, 0)
-	x = calibrate(data.shape[1],header,axis=1)
-	y = calibrate(data.shape[1],header,axis=2)
-	lcdm=cosmology.Planck15
-	z = 0.2323 #Abell 2146
-
-	#center
-	Mpc_rad = lcdm.angular_diameter_distance(z)
-	kpc_deg = Mpc_rad.to('kpc')/units.radian.in_units('degree')
-	x *= kpc_deg.value
-	y *= kpc_deg.value
-	x -= x.mean()
-	y -= y.mean()
-	#degrees to kpc
-	range = data.max()/data[data>0].min()
-	xraypeak = np.argwhere(data == np.nanmax(data))
-	data[data<0] = 0 #excessive background subtraction
-	print("Observation read in")
-
-	#read_sim
-	simfiles = glob.glob(simdir+'/*fits')#xrayprojz/ on wiluna
-	simfiles.sort()
-
-	times = np.arange(len(simfiles))/10.
-	if peak_only:
-		return xraypeak
-	else:
-		return simfiles, times, data, errorsq, x, y, xraypeak
+from read import open_fits, calibrate, init
 
 basedir = '/home/fas/nagai/uc24/scratch60/'
 obsfile = basedir+'kT_out.fits'#inputs['obsdir'] + inputs['obs_file']
@@ -66,10 +19,10 @@ xraysb_err = basedir+'ff.img.e300_7000_bin3_all_obsids_box_0s_to_1s_no_bkg_subtr
 simfiles, times, data, errorsq, x, y, xp = init(obsfile, errfile, fitsdir)
 xraypeak = init(xraysb_obs, xraysb_err, 'fitsfiles/xray_sb', peak_only=True)
 
-def rotate_image(data, image, angle):
+def rotate_image(image, angle):
 	image[np.isnan(image)] = 0 #otherwise rotation gets fucked
 	rotimage = rotate(image, angle = angle)
-	datasize = data.shape[0]
+	datasize = image.shape[0]
 		#no we have to start from the center
 	rotsize = rotimage.shape[0]
 	if rotsize != datasize:
@@ -77,28 +30,24 @@ def rotate_image(data, image, angle):
 		ystart = (rotsize-datasize)//2
 		rotimage = rotimage[xstart:xstart+datasize, ystart:ystart+datasize]
 		rotimage[rotimage == 0] = np.nan
-	diff = ((rotimage - data))**2/errorsq
-	diff[diff==np.inf]=np.nan
-	return rotimage, diff
+	return rotimage
 
-angles = np.linspace(0, 350, 36)
-def best_rotation(data, image, offset):
+def shift_image(image, offset, angle):
 	xstep, ystep, startshift = offset
-	chisq = []
-	for angle in angles:
-		imagecut = np.roll(np.roll(image, xstep-startshift, axis=0), ystep-startshift, axis=1)
-		imagecut[np.isnan(imagecut)] = 0 #otherwise rotation gets fucked
-		rotimagecut, diff = rotate_image(data, image, angle)
-		nvalidpix = len(np.ma.masked_invalid(diff).compressed())
-		chisq.append(np.nansum(diff)/nvalidpix)
-		# print("angle %d complete" % angle
+	imagecut = np.roll(np.roll(image, xstep-startshift, axis=0), ystep-startshift, axis=1)
+	imagecut[np.isnan(imagecut)] = 0 #otherwise rotation gets fucked
+	return imagecut
+
+def shift_rotate_compare(data, image, offset, angle):
+	shiftimage = shift_image(image, offset)
+	rotimagecut = rotate_image(shiftimage, angle)
+	nvalidpix = len(np.ma.masked_invalid(rotimage).compressed())
+	diff = (rotimage - data)**2 / errorsq
+	chisq = np.nansum(diff)/nvalidpix
 	print("offset (%d, %d) complete" % (xstep, ystep))
-	best_angle = angles[chisq.index(min(chisq))]
-	# if int(inputs['makeplot']):
-	# 	plot(image, times[filenum], best_angle) #so the angle info is stored in the image name
-	del(rotimagecut, imagecut)
+	del(shiftimage, rotimage, nvalidpix)
 	gc.collect()
-	return min(chisq), best_angle
+	return chisq
 
 def match(simfiles, filenum, xraypeak, peak_threshold = 0.7, pixels_to_shift = 10, suffix=''):
 	if glob.glob('chisq%s.npy' % suffix):

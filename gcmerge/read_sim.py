@@ -11,32 +11,30 @@ sciencedir = a[int(inputs['simid'])].split('\n')[0]
 
 ds = yt.load(inputs['sciencedir']+'/'+inputs['testdatafile'])
 
+rescale = None
+
 if rescale:
-  # scalingcoeff = Msim/Mobs
-  units_override = {"mass_unit":(rescale**1./3 * ds.mass_unit.value, ds.mass_unit.units),
+    units_override = {"mass_unit":(rescale**1./3 * ds.mass_unit.value, ds.mass_unit.units),
 		  "length_unit":(rescale**1./3 * ds.length_unit.value, ds.length_unit.units)}
 
-def make_fits(sciencedir, property,zmin=None, zmax=None, startsnap=0, proj=False, fits=True, endsnap=None,weight_field=None):
-        files=glob.glob(sciencedir+'/Data*')
-        files.sort()
-        print( len(files), ' snaps to go')
-        if endsnap == None:
-            endsnap = len(files)
+simfiles=glob.glob(sciencedir+'/Data*')
+simfiles.sort()
 
-        for file in files[startsnap:endsnap]:
-          if rescale:
-            ds = yt.load(file,units_override=units_override)
-          else:
-            ds = yt.load(file)
+def make_fits(filenum, property, outputdir, slice=False, fits=False, weight_field=None, image_res=None): 
+    file = simfiles[filenum]
+    if rescale:
+        ds = yt.load(file,units_override=units_override)
+    else:
+        ds = yt.load(file)
 
-	   if property == "xray_emissivity_0.3_7.0_keV":
-		   xray_fields = yt.add_xray_emissivity_field(ds, 0.3, 7.0, table_type='apec', metallicity=0.3)
-           if proj==True:
-            p = yt.ProjectionPlot(ds, 'z', ("gas",property),width=(14,'Mpc'),
-                center='c',weight_field=weight_field)
-            p.set_zlim(property,zmin, zmax)
-            p.save()
-           if fits==True:
-            prj_fits = yt.FITSProjection(ds, "z", [("gas",property)], weight_field=weight_field)
-            prj_fits.writeto("tempproj/%s_proj_%d.fits" %(property, files.index(file)))
-           print( 'Done for snap', files.index(file))
+    if "xray_emissivity" in property:
+        emin = property.split('_')[1]
+        emax = property.split('_')[2]
+        xray_fields = yt.add_xray_emissivity_field(ds, emin, emax, table_type='apec', metallicity=0.3)
+    if slice==True:
+        p = yt.FITSSlice(ds, 'z', ("gas",property))
+        p.writeto(outputdir+"/%s_slice_%d.fits" % (property, filenum), image_res=image_res)
+    if fits==True:
+        prj_fits = yt.FITSProjection(ds, "z", [("gas",property)], weight_field=weight_field, image_res=image_res)
+        prj_fits.writeto(outputdir+"/%s_proj_%d.fits" %(property, files.index(file)))
+    print( 'Done for snap', files.index(file))
