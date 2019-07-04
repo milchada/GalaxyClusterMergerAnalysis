@@ -9,66 +9,30 @@ from matplotlib.path import Path
 from matplotlib import patches
 from astropy.io import fits
 from skimage.feature import peak_local_max
-from astropy import constants
-from scipy.ndimage import gaussian_gradient_magnitude
 from find_features import filter_edge
+from fit_arcs import * 
+from islands import *
 
 mfp_a2146 = 23 #mean free path in kpc
 resolution = fits.getheader(files[0])['CDELT1']
 
-def find_features(filenum, edgecontrast=4, isfile=True, type='temp', halfwidth = 256, peak_threshold = 0.9):
-	if isfile:
-		file = files[filenum]
-	else:
-		file = filenum
-	img_edges, img = filter_edge(file, edgecontrast=edgecontrast,isfile=isfile)
-	pts = np.argwhere(img_edges)
-	
-	if type == 'temp':
-		img *= constants.k_B.to('keV K**-1').value
-	ggm = gaussian_gradient_magnitude(img[img_edges], sigma=mfp_a2146/resolution)
-
-	peak = np.argmax(ggm) #can do for more points than just this one 
-	return img_edges, img, pts, peak, resolution 
-
-def radial_profile(data, center):
-	"""Make these emission weighted"""
-	y, x = np.indices((data.shape))
-	r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
-	r = r.astype(np.int)
-	keep = ~np.isnan(data.ravel())
-	tbin = np.bincount(r.ravel()[keep], data.ravel()[keep])
-	nr = np.bincount(r.ravel()[keep])
-	radialprofile = tbin / nr
-	return radialprofile 
-
+sbfiles = glob.glob('xray_sb/*fits')#fitsfiles
+sbfiles.sort()
 tempfiles = glob.glob('tempproj/*fits')#('fitsfiles/temp/*fits')
 tempfiles.sort()
-img_edges, img, pts, peak, resolution = find_features(18)
 
-files = glob.glob('xray_sb/*fits')#fitsfiles
-files.sort()
-sb_edges, sb_img, sb_pts, sb_peak, resolution = find_features(18)
+time_of_interest = 1.8
+snapnum = int(10*time_of_interest)
+temptimes = [file.split('_')[-1].split('.')[0] for file in tempfiles]
+sbtimes   = [file.split('_')[-1].split('.')[0] for file in sbfiles]
+
+img_edges, img,    pts,    peak,    resolution = filter_edge(tempfiles[temptimes.index(snapnum)], edgecontrast=4,isfile=True, type='temp', sigma=mfp_a2146/resolution)
+sb_edges,  sb_img, sb_pts, sb_peak, resolution = filter_edge(sbfiles[sbtimes.index(snapnum)], edgecontrast=4,isfile=True, type='sb', sigma=mfp_a2146/resolution)
 
 ind = np.lexsort((pts[:,0],pts[:,1])) #i.e. sorted first by y, then by x
 pixlist = [Pixel(pt) for pt in pts[ind]]
 lines = mkLines (pixlist)
 islandlist = mkIslands (lines, 3)
-
-def find_points_above_contrast(island, mincontrast=1):
-	feature = islandlist[island]
-	points = np.array([feature.lines[0].pixlist[0].rawx, feature.lines[0].pixlist[0].rawy])
-	for line in feature.lines:
-		for pix in line.pixlist:
-			points = np.insert(points, -1, (pix.rawx,pix.rawy))
-	points = points[1:-1]
-	points = np.reshape(points, (len(points)/2, 2))
-	ggm = gaussian_gradient_magnitude(img, 1)
-	ggms = []
-	for point in points:
-		ggms.append(ggm[point[0]][point[1]])
-	ggms = np.array(ggms)
-	return points[np.argwhere( ggms >= mincontrast*ggms.max())]
 
 centre = peak_local_max(sb_img, min_distance = 15)
 centre = centre[0]

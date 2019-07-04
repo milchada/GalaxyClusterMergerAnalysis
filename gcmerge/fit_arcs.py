@@ -58,3 +58,14 @@ def fit_arc(island, time,ax1=None, ax2=None):
 			continue
 	return arcfit
 
+def radial_profile(data, center):
+	"""Make these emission weighted"""
+	y, x = np.indices((data.shape))
+	r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
+	r = r.astype(np.int)
+	keep = ~np.isnan(data.ravel())
+	tbin = np.bincount(r.ravel()[keep], data.ravel()[keep])
+	nr = np.bincount(r.ravel()[keep])
+	radialprofile = tbin / nr
+	return radialprofile 
+

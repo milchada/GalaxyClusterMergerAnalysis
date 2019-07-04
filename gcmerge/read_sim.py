@@ -1,7 +1,8 @@
-#read gamer
-import yt
-import glob
-import os
+######################################################
+## read simulation output and convert to FITS files ##
+######################################################
+
+import yt, glob, os
 from . import inputs
 
 with open(inputs['filenamedir']) as f:
@@ -23,7 +24,7 @@ simfiles.sort()
 def make_fits(filenum, property, outputdir, slice=False, fits=False, weight_field=None, image_res=None): 
     file = simfiles[filenum]
     if rescale:
-        ds = yt.load(file,units_override=units_override)
+        ds = yt.load(file, units_override=units_override)
     else:
         ds = yt.load(file)
 

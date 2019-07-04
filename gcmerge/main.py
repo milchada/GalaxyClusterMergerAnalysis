@@ -1,3 +1,7 @@
+################################################################
+## Make FITS files, compare them to obs, and save comparisons ##
+################################################################
+
 import glob, os, yt 
 import numpy as np
 from read_sim import sciencedir, simfiles, make_fits

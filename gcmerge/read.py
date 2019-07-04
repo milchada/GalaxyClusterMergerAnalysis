@@ -1,3 +1,7 @@
+##########################################
+## Read in observed and simulated files ##
+##########################################
+
 import numpy as np 
 import matplotlib.pylab as plt
 import matplotlib, glob, gc 
@@ -36,6 +40,7 @@ def init(obsfile, errfile, simdir, peak_only=False):
 	y *= kpc_deg.value
 	x -= x.mean()
 	y -= y.mean()
+	
 	#degrees to kpc
 	range = data.max()/data[data>0].min()
 	xraypeak = np.argwhere(data == np.nanmax(data))
@@ -43,7 +48,7 @@ def init(obsfile, errfile, simdir, peak_only=False):
 	print("Observation read in")
 
 	#read_sim
-	simfiles = glob.glob(simdir+'/*fits')#xrayprojz/ on wiluna
+	simfiles = glob.glob(simdir+'/*fits')
 	simfiles.sort()
 
 	times = np.arange(len(simfiles))/10.

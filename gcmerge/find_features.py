@@ -7,12 +7,13 @@ import matplotlib.pylab as plt
 from matplotlib import cm, colors
 from astropy.io import fits
 from skimage.feature import canny, peak_local_max
+from scipy.ndimage import gaussian_gradient_magnitude
 from sklearn.cluster import KMeans
 
 halfwidth = 256
 peak_threshold = 0.9 #this really finds the right x-ray peak
 
-def filter_edge(file,plot=False, isfile=True,edgecontrast = 4, edge_threshold=0, cut = False):
+def filter_edge(file,plot=False, isfile=True,edgecontrast = 4, edge_threshold=0, cut = False, type='sb', sigma=1):
 	if isfile:
 		img = fits.open(file)[0].data
 	else:
@@ -74,4 +75,12 @@ def filter_edge(file,plot=False, isfile=True,edgecontrast = 4, edge_threshold=0,
 		plt.title('%0.2f Gyr' % time)
 		plt.savefig('featuremaps/sq_weighted_%0.2f.png' % time)
 	print("Edges found!")
-	return edge1, imcut
+	
+	pts = np.argwhere(img_edges)
+	
+	if type == 'temp':
+		img *= constants.k_B.to('keV K**-1').value
+	ggm = gaussian_gradient_magnitude(img[img_edges], sigma=sigma)
+
+	peak = np.argmax(ggm) #can do for more points than just this one 
+	return img_edges, img, pts, peak, resolution 
