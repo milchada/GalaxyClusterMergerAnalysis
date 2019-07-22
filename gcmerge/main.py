@@ -4,17 +4,19 @@
 
 import glob, os, yt 
 import numpy as np
-from read_sim import sciencedir, simfiles, make_fits
+from read_sim import make_fits
 from read import open_fits, calibrate
 from bcg_dist import bcg_separation
 from lensing_array import obs_res, shift_rotate_trim
 from compare import shift_rotate_compare
 from find_features import 
 from fit_arcs import *
+from input_params import *
+
+### make FITS files of potential if they don't already exist
 
 potdir = sciencedir+'/fitsfiles/potential/zslice/'
 
-#1 - BCG dist to select snapshots
 for filenum in range(len(simfiles)):
 	if not os.path.isfile(potdir+'gravitational_potential_z_%s.fits' % filenum):
 		make_fits(filenum, 'gravitational_potential', outputdir = potdir, slice=True)
@@ -22,9 +24,10 @@ for filenum in range(len(simfiles)):
 potfiles = glob.glob(outputdir+'*fits')
 potfiles.sort()
 
+#1 - BCG dist to select snapshots
 distmax = 470 #kpc
 thetamax = np.deg2rad(20)
-distmin = distmin*np.cos(thetamax)
+distmin = distmax*np.cos(thetamax)
 
 shortlist = []
 rot_angle = []
