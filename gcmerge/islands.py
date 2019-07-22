@@ -36,19 +36,15 @@ class PixLine (object):
         s +="]"
         return s
 
-    def __cmp__ (self, other):
         # PixLines with the same y cannot overlap
-        if self.y < other.y:
-            return -1
-        if self.y > other.y:
-            return 1
-        # They have the same y beyond this point
-        if self.xmax < other.xmin:
-            return -1
-        if self.xmin > other.xmax:
-            return 1
-        # Must be the same PixLine
-        return 0
+    def __lt__ (self, other):    
+        return (self.y < other.y) or ((self.y == other.y) and (self.xmax < other.xmin))
+        
+    def __gt__ (self, other):
+        return ( self.y > other.y) or ((self.y == other.y) and (self.xmin > other.xmax))
+    
+    def __eq__ (self, other):
+        return not (self > other) and not (self < other)
 
     def count (self):
         """Number of pixels.

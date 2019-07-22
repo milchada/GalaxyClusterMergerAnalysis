@@ -17,9 +17,10 @@ z = 0.2323
 Mpc_rad = lcdm.angular_diameter_distance(z).value
 kpc_deg = Mpc_rad*u.Mpc.to('kpc')/u.rad.to('degree')
 
+homedir = '/charra/uchadaya/GAMER/'
 #CENTER THESE COORDS IN THE CHANDRA FOV
-obsfile = '../ff.img.e300_7000_bin3_all_obsids_box_excl_point_sources.fits'
-errfile = '../ff.img.e300_7000_bin3_all_obsids_box_0s_to_1s_no_bkg_subtr2_thresh.fits'
+obsfile = homedir+'ff.img.e300_7000_bin3_all_obsids_box_excl_point_sources.fits'
+errfile = homedir+'ff.img.e300_7000_bin3_all_obsids_box_0s_to_1s_no_bkg_subtr2_thresh.fits'
 obshead = fits.getheader(obsfile)                           
 
 coords = [("239.058 +66.3482"), "239.0007 +66.37329"]

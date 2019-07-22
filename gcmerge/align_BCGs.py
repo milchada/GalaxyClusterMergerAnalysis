@@ -1,4 +1,5 @@
 from bcg_dist import bcg_separation
+from scipy.ndimage.interpolation import rotate
 import math
 
 def angle(pt1, pt2):
@@ -61,4 +62,4 @@ def align_bcgs(potfile, xrayfile):
 	rot_image = rotate(binned_data, bcg_angle_sim-bcg_angle_obs, reshape=False)
 	
 	#good! now output this shifted and rotated array
-	return rot_image
+	return np.flip(rot_image, axis=1) #because obs RA are decreasing, while sim is increasing
