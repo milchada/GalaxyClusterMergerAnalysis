@@ -63,3 +63,5 @@ def align_bcgs(potfile, xrayfile):
 	
 	#good! now output this shifted and rotated array
 	return np.flip(rot_image, axis=1) #because obs RA are decreasing, while sim is increasing
+
+#testing in app editing
