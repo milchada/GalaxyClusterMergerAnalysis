@@ -4,40 +4,30 @@
 #########################################
 
 import numpy as np
-from astropy.coordinates import SkyCoord
-import astropy.units as u
 import glob, os
-from astropy import cosmology
 from astropy.io import fits
 from sklearn.cluster import KMeans
-from scipy.interpolate import interp2d
+from skimage.feature import peak_local_max
+import matplotlib.pylab as plt
+from matplotlib import colors
 
-lcdm=cosmology.Planck15
-z = 0.2323
-Mpc_rad = lcdm.angular_diameter_distance(z).value
-kpc_deg = Mpc_rad*u.Mpc.to('kpc')/u.rad.to('degree')
+def find_peak(file, axis=None, ret=True, xmin=400, xmax=600, ymin = 400, ymax = 600, min_distance=3, threshold_rel=0.01):	
+	snapnum = file.split('slice_')[1].split('.fits')[0]
+	img = -1*fits.getdata(file)
+	imcut = img[xmin:xmax, ymin:ymax]
+	if axis:
+		axis.cla()
+		axis.imshow(imcut, norm=colors.LogNorm(imcut[imcut>0].min(),imcut.max()),origin='bottom left')
+		axis.text(imcut.shape[0]/2,410,snapnum, color='w')
+		# axis.set_ylim(0,ymax-ymin)
+	pts = peak_local_max(imcut, min_distance=min_distance, threshold_rel=threshold_rel)
+	if axis:
+		axis.scatter(pts[:,1],pts[:,0],s=0.03,c='r')
 
-homedir = '/charra/uchadaya/GAMER/'
-#CENTER THESE COORDS IN THE CHANDRA FOV
-obsfile = homedir+'ff.img.e300_7000_bin3_all_obsids_box_excl_point_sources.fits'
-errfile = homedir+'ff.img.e300_7000_bin3_all_obsids_box_0s_to_1s_no_bkg_subtr2_thresh.fits'
-obshead = fits.getheader(obsfile)                           
-
-coords = [("239.058 +66.3482"), "239.0007 +66.37329"]
-bcg_coords = SkyCoord(coords, unit=(u.deg), obstime="J2000")
-
-ptg_coords = SkyCoord([str(obshead['RA_PNT'])+" "+str(obshead['DEC_PNT'])], 
-	unit=u.deg, obstime='J2000')
-
-def pixel(degree,axis='1'):
-	x = np.array([(ind - obshead['CRPIX'+axis])*obshead['CDELT'+axis] + obshead['CRVAL'+axis] 
-		for ind in range(obshead['NAXIS'+axis])])
-	return np.argmin(abs(x-degree))
-
-# bcg1_pix = [pixel(bcg_coords[0].ra.value), pixel(bcg_coords[0].dec.value, '2')]
-# bcg2_pix = [pixel(bcg_coords[1].ra.value), pixel(bcg_coords[1].dec.value, '2')]
-
-from find_peaks import find_peak
+	pts += (xmin, ymin) #coz that's xmin, ymin of imcut
+	
+	if ret:
+		return pts 
 
 def bcg_separation(file, distmax_kpc=470, ret_peaks=False, xmin=300, xmax=1200, ymin = 300, ymax = 1200, axis=None):	
 	data = fits.getdata(file)
@@ -66,4 +56,4 @@ def bcg_separation(file, distmax_kpc=470, ret_peaks=False, xmin=300, xmax=1200, 
 		if ret_peaks:
 			return peaks
 		else:
-			return sep
+			return np.linalg.norm(peaks[1] - peaks[0])*header['CDELT1']

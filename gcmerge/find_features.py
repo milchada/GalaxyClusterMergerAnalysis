@@ -14,11 +14,7 @@ from astropy import constants
 halfwidth = 256
 peak_threshold = 0.9 #this really finds the right x-ray peak
 
-def filter_edge(file,plot=False, isfile=True,edgecontrast = 4, edge_threshold=0, cut = False, type='sb', sigma=1):
-	if isfile:
-		img = fits.open(file)[0].data
-	else:
-		img = file
+def filter_edge(img, plot=False, edgecontrast = 4, edge_threshold=0, cut = False, sigma=1):
 	centre = peak_local_max(img,threshold_rel=peak_threshold)
 	if cut:
 		if len(centre) > 1:
@@ -63,8 +59,7 @@ def filter_edge(file,plot=False, isfile=True,edgecontrast = 4, edge_threshold=0,
 		
 		imcut = img[left:right, bottom:top]
 	else:
-		dim = img.shape[0]
-		imcut = img[int(dim/4):int(3*dim/4), int(dim/4):int(3*dim/4)]
+		imcut = img
 		
 	edge = canny(np.log10(imcut), sigma=edgecontrast, high_threshold=edge_threshold)
 
@@ -78,10 +73,10 @@ def filter_edge(file,plot=False, isfile=True,edgecontrast = 4, edge_threshold=0,
 	print("Edges found!")
 	
 	pts = np.argwhere(edge)
-	
-	if type == 'temp':
-		img *= constants.k_B.to('keV K**-1').value
-	ggm = gaussian_gradient_magnitude(img[edge], sigma=sigma)
+
+	ggm = gaussian_gradient_magnitude(imcut[edge], sigma=sigma)
 
 	peak = np.argmax(ggm) #can do for more points than just this one 
-	return edge, img, pts, peak, resolution 
+	return edge,  imcut, pts, peak
+
+	

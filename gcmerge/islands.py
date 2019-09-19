@@ -185,14 +185,14 @@ def mkIslands (linelist, maxsep = 1):
 import numpy as np
 from scipy.ndimage import gaussian_gradient_magnitude
 
-def find_points_above_contrast(island, mincontrast=1):
+def find_points_above_contrast(img, islandlist, island, mincontrast=1):
     feature = islandlist[island]
     points = np.array([feature.lines[0].pixlist[0].rawx, feature.lines[0].pixlist[0].rawy])
     for line in feature.lines:
         for pix in line.pixlist:
             points = np.insert(points, -1, (pix.rawx,pix.rawy))
     points = points[1:-1]
-    points = np.reshape(points, (len(points)/2, 2))
+    points = np.reshape(points, (int(len(points)/2), 2))
     ggm = gaussian_gradient_magnitude(img, 1)
     ggms = []
     for point in points:

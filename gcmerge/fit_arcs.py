@@ -29,7 +29,7 @@ def leastsq_circle(x,y):
     residu   = np.sum((Ri - R)**2)
     return xc, yc, R, residu
 
-def fit_arc(island, time,ax1=None, ax2=None):
+def fit_arc(img, islandlist, island, ax1=None, ax2=None):
 	cmap = cm.seismic
 	i = -1
 	arcfit = np.empty((18,6))
@@ -38,19 +38,18 @@ def fit_arc(island, time,ax1=None, ax2=None):
 		arcfit[i,0] = mincontrast
 		try:
 			#select n points on either side of the central point
-			feature = find_points_above_contrast(island, mincontrast)[:,0]
+			feature = find_points_above_contrast(img, islandlist, island, mincontrast)[:,0]
+			#this function is in islands.py
 			xdata = feature[:,1]
 			ydata = feature[:,0]
 			arcfit[i, 1] = len(feature)
-			fit = leastsq_circle(xdata, ydata)[:3]
-			arcfit[i, 2:5] = fit[:3]
-			#sum of distances of points from fit
-			arcfit[i, 5] = fit[-1]
+			fit = leastsq_circle(xdata, ydata)
+			arcfit[i, 2:] = fit
 			del(fit, xdata, ydata, feature)
 			gc.collect()
 			print(mincontrast, " done")
 		
-		except IndexError:
+		except (TypeError,IndexError):
 			print(mincontrast, " not enough pts")
 			continue
 		except (RuntimeError):
@@ -59,13 +58,15 @@ def fit_arc(island, time,ax1=None, ax2=None):
 	return arcfit
 
 def radial_profile(data, center):
-	"""Make these emission weighted"""
+	"""These have the same weighting as the FITS projection"""
 	y, x = np.indices((data.shape))
 	r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
-	r = r.astype(np.int)
+	r = r.astype(int)
 	keep = ~np.isnan(data.ravel())
 	tbin = np.bincount(r.ravel()[keep], data.ravel()[keep])
+	#counts number of points at a given radius, weighted by the temperature at that point
 	nr = np.bincount(r.ravel()[keep])
+	#counts number of points at each radius, not weighted
 	radialprofile = tbin / nr
+	#ratio of these two gives the profile. yes makes sense.
 	return radialprofile 
-

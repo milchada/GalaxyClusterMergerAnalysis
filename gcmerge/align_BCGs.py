@@ -1,4 +1,5 @@
 from bcg_dist import bcg_separation
+from scipy.interpolate import interp2d
 from scipy.ndimage.interpolation import rotate
 import math
 
@@ -20,7 +21,7 @@ def rotate_image(image, angle):
 		rotimage[rotimage == 0] = np.nan
 	return rotimage
 
-def align_bcgs(potfile, xrayfile):
+def align_bcgs(potfile, xrayfile, bcg1_pix, bcg2_pix):
 	peaks = bcg_separation(potfile, ret_peaks=True, xmin=300, xmax=1200, ymin = 300, ymax = 1200)
 	potential = fits.getdata(potfile)
 	minima1 = potential[peaks[0][0]][peaks[0][1]] 
@@ -28,10 +29,6 @@ def align_bcgs(potfile, xrayfile):
 
 	#this is centered on xray peak
 	obsdata, errorsq, x, y, xp = init(obsfile, errfile)
-
-	#currently manual because wtf
-	bcg1_pix = xp
-	bcg2_pix = (270,230)
 
 	data = fits.getdata(xrayfile)
 	header = fits.getheader(xrayfile)

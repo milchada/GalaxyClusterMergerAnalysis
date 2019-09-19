@@ -1,25 +1,34 @@
 ######################################################
 ## read simulation output and convert to FITS files ##
 ######################################################
+import yt, glob, os, gc
 
-import yt, glob, os
-from . import inputs
-
-
-def make_fits(file, property, outputdir, slice=False, fits=False, weight_field=None, image_res=None): 
+def make_fits(files, filenum, pot=True, sb=True, temp=True):
+    file = files[filenum]
     ds = yt.load(file)
 
-    if "xray_emissivity" in property:
-        emin = property.split('_')[1]
-        emax = property.split('_')[2]
-        xray_fields = yt.add_xray_emissivity_field(ds, emin, emax, table_type='apec', metallicity=0.3)
+    if sb or temp:
+        xray_fields = yt.add_xray_emissivity_field(ds, 0.3, 7, table_type='apec', metallicity=0.3)
 
-    if slice==True:
-        p = yt.FITSSlice(ds, 'z', ("gas",property))
-        p.writeto(outputdir+"/%s_slice_%d.fits" % (property, filenum), image_res=image_res)
+    if pot:
+        p = yt.FITSSlice(ds, 'z', ("gas","gravitational_potential"))
+        p.writeto("fitsfiles/potential/potential_slice_%d.fits" % (files.index(file)))
+        print(" Potential done")
+        del(p)
+        gc.collect()
 
-    if fits==True:
-        prj_fits = yt.FITSProjection(ds, "z", [("gas",property)], weight_field=weight_field, image_res=image_res)
-        prj_fits.writeto(outputdir+"/%s_proj_%d.fits" %(property, files.index(file)))
+    if sb:
+        prj_fits = yt.FITSProjection(ds, "z", ('gas','xray_photon_emissivity_0.3_7_keV'), weight_field='emission_measure')
+        prj_fits.writeto("fitsfiles/photon_emissivity/xray_photon_emissivity_0.3_7_keV_proj_%d.fits" %(files.index(file)))
+        print(" Xray SB done")
+        del(prj_fits)
+        gc.collect()
 
-    print( 'Done for snap', files.index(file))
+    if temp:
+        prj_fits = yt.FITSProjection(ds, "z", ('gas','temperature'), weight_field='mazzotta_weighting')
+        prj_fits.writeto("fitsfiles/temperature/temperature_proj_%d.fits" %(files.index(file)))
+        print("Temp done")
+        del(prj_fits)
+        gc.collect()
+        print( 'Done for snap', files.index(file))
+
