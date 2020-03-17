@@ -76,7 +76,10 @@ def filter_edge(img, plot=False, edgecontrast = 4, edge_threshold=0, cut = False
 
 	ggm = gaussian_gradient_magnitude(imcut[edge], sigma=sigma)
 
-	peak = np.argmax(ggm) #can do for more points than just this one 
+	try:
+		peak = np.argmax(ggm) #can do for more points than just this one 
+	except ValueError:
+		peak = None
 	return edge,  imcut, pts, peak
 
 	

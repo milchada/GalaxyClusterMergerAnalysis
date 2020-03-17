@@ -29,7 +29,7 @@ def leastsq_circle(x,y):
     residu   = np.sum((Ri - R)**2)
     return xc, yc, R, residu
 
-def fit_arc(img, islandlist, island, ax1=None, ax2=None):
+def fit_arc(img, islandlist, island, verbose=False):
 	cmap = cm.seismic
 	i = -1
 	arcfit = np.empty((18,6))
@@ -47,7 +47,8 @@ def fit_arc(img, islandlist, island, ax1=None, ax2=None):
 			arcfit[i, 2:] = fit
 			del(fit, xdata, ydata, feature)
 			gc.collect()
-			print(mincontrast, " done")
+			if verbose:
+				print(mincontrast, " done")
 		
 		except (TypeError,IndexError):
 			print(mincontrast, " not enough pts")

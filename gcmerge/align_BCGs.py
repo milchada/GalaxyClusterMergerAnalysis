@@ -1,4 +1,4 @@
-from bcg_dist import bcg_separation
+from bcg_dist import find_peak
 from scipy.interpolate import interp2d
 from scipy.ndimage.interpolation import rotate
 import math
@@ -21,8 +21,8 @@ def rotate_image(image, angle):
 		rotimage[rotimage == 0] = np.nan
 	return rotimage
 
-def align_bcgs(potfile, xrayfile, bcg1_pix, bcg2_pix):
-	peaks = bcg_separation(potfile, ret_peaks=True, xmin=300, xmax=1200, ymin = 300, ymax = 1200)
+def align_bcgs(potfile, xrayfile, bcg1_pix=None, bcg2_pix=None):
+	peaks = find_peak(potfile, ret_peaks=True, xmin=300, xmax=1200, ymin = 300, ymax = 1200)
 	potential = fits.getdata(potfile)
 	minima1 = potential[peaks[0][0]][peaks[0][1]] 
 	minima2 = potential[peaks[1][0]][peaks[1][1]] 
@@ -49,16 +49,19 @@ def align_bcgs(potfile, xrayfile, bcg1_pix, bcg2_pix):
 	sx -= pos_peak1[0]
 	sy -= pos_peak1[1]
 
-	#rotate each about xp counterclockwise by angle 
-	bcg_angle_obs = np.degrees(angle(bcg2_pix - xp, bcg1_pix - xp))
-	bcg_angle_sim = np.degrees(angle(peak2, peak1))
-
 	f = interp2d(sx, sy, data)
 	binned_data = f(x,y)
 
-	rot_image = rotate(binned_data, bcg_angle_sim-bcg_angle_obs, reshape=False)
+	#rotate each about xp counterclockwise by angle 
+	if bcg1_pix:
+		bcg_angle_obs = np.degrees(angle(bcg2_pix - xp, bcg1_pix - xp))
+		bcg_angle_sim = np.degrees(angle(peak2, peak1))
+
+		rot_image = rotate(binned_data, bcg_angle_sim-bcg_angle_obs, reshape=False)
 	
-	#good! now output this shifted and rotated array
-	return np.flip(rot_image, axis=1) #because obs RA are decreasing, while sim is increasing
+		#good! now output this shifted and rotated array
+		return rot_image #because obs RA are decreasing, while sim is increasing
+	else:
+		return binned_data
 
 #testing in app editing
