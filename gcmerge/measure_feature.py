@@ -46,4 +46,6 @@ def angles(temp_img, islandlist, isle_bs, isle_us, bcg_xy, gwidth = 5, chisqmax 
 	#how to find the angle between three points/two lines? 
 	bs_mean = np.mean(bs, axis = 0)
 	us_mean = np.mean(us, axis = 0)
-	
+	bs_to_bcg = angle(bcg_xy, bs_mean)
+	us_to_bcg = angle(bcg_cy, us_mean)
+	return np.rad2deg(bs_to_bcg - us_to_bcg)
