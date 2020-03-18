@@ -2,11 +2,10 @@
 # Fit arcs to sharp features #
 ##############################
 
-import glob
 import numpy as np
-from matplotlib import pylab as plt, colors, cm
 from scipy import optimize
 import gc
+from points_above_gradient import find_points_above
 
 def calc_R(x,y, xc, yc):
     """ calculate the distance of each 2D points from the center (xc, yc) """
@@ -30,7 +29,6 @@ def leastsq_circle(x,y):
     return xc, yc, R, residu
 
 def fit_arc(img, islandlist, island, verbose=False):
-	cmap = cm.seismic
 	i = -1
 	arcfit = np.empty((18,6))
 	for mincontrast in np.arange(.9,0,-.05):
@@ -38,7 +36,7 @@ def fit_arc(img, islandlist, island, verbose=False):
 		arcfit[i,0] = mincontrast
 		try:
 			#select n points on either side of the central point
-			feature = find_points_above_contrast(img, islandlist, island, mincontrast)[:,0]
+			feature = find_points_above(img, islandlist, island, mincontrast)[:,0]
 			#this function is in islands.py
 			xdata = feature[:,1]
 			ydata = feature[:,0]
@@ -57,17 +55,3 @@ def fit_arc(img, islandlist, island, verbose=False):
 			print(mincontrast, "no good fit")
 			continue
 	return arcfit
-
-def radial_profile(data, center):
-	"""These have the same weighting as the FITS projection"""
-	y, x = np.indices((data.shape))
-	r = np.sqrt((x - center[0])**2 + (y - center[1])**2)
-	r = r.astype(int)
-	keep = ~np.isnan(data.ravel())
-	tbin = np.bincount(r.ravel()[keep], data.ravel()[keep])
-	#counts number of points at a given radius, weighted by the temperature at that point
-	nr = np.bincount(r.ravel()[keep])
-	#counts number of points at each radius, not weighted
-	radialprofile = tbin / nr
-	#ratio of these two gives the profile. yes makes sense.
-	return radialprofile 

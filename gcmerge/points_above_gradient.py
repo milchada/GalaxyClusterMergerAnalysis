@@ -1,4 +1,7 @@
-from islands import *
+####################################################################################
+# Given an island of points, select those with a minimum contrast vs neighbourhood #
+####################################################################################
+
 import numpy as np
 from scipy.ndimage import gaussian_gradient_magnitude
 

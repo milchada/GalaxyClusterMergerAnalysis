@@ -3,13 +3,9 @@
 ##########################################
 
 import numpy as np 
-import matplotlib.pylab as plt
-import matplotlib, glob, gc 
+import glob
 from astropy import units, cosmology
 from astropy.io import fits
-
-def open_fits(filename):
-	return fits.getdata(filename), fits.getheader(filename)
 
 def calibrate(length, header, axis=1):
 	refpix = header['CRPIX'+str(axis)]

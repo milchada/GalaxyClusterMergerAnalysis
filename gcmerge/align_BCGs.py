@@ -1,7 +1,6 @@
-from bcg_dist import find_peak
+from bcg_dist import find_peak, rotate, np, fits
 from scipy.interpolate import interp2d
-from scipy.ndimage.interpolation import rotate
-import math
+from read import init, calibrate
 
 def angle(pt1, pt2):
 	relative_pos = (pt2 - pt1)
@@ -21,8 +20,8 @@ def rotate_image(image, angle):
 		rotimage[rotimage == 0] = np.nan
 	return rotimage
 
-def align_bcgs(potfile, xrayfile, bcg1_pix=None, bcg2_pix=None):
-	peaks = find_peak(potfile, ret_peaks=True, xmin=300, xmax=1200, ymin = 300, ymax = 1200)
+def align_bcgs(obsfile, errfile, potfile, xrayfile, bcg1_pix=None, bcg2_pix=None, xmin=300, xmax=1200, ymin = 300, ymax = 1200):
+	peaks = find_peak(potfile, ret_peaks=True, xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax)
 	potential = fits.getdata(potfile)
 	minima1 = potential[peaks[0][0]][peaks[0][1]] 
 	minima2 = potential[peaks[1][0]][peaks[1][1]] 
