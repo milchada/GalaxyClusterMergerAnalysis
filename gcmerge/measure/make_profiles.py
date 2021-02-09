@@ -23,14 +23,13 @@ def radial_profile(data, center):
 	#ratio of these two gives the profile. yes makes sense.
 	return radialprofile 
 
-def make_profile(temp_img, other_img, islandlist, island, label, centre, ax, ax1, ax2, gwidth=5, chisqmax=10):
+def make_profile(temp_img, island, label, ax, centre = 'arc', ax1=None, gwidth=5, chisqmax=10, ret=True):
 	if centre == 'xray':
-		feature, centre, rad = select_feature(temp_img, islandlist, island, gwidth, centre=xraypeak, chisqmax=chisqmax)
+		feature, centre, rad = select_feature(temp_img, island, gwidth, centre=xraypeak, chisqmax=chisqmax)
 	elif centre == 'arc':
-		feature, centre, rad = select_feature(temp_img, islandlist, island, gwidth, chisqmax=chisqmax)
+		feature, centre, rad = select_feature(temp_img, island, gwidth, chisqmax=chisqmax)
 
-	color = cm.gist_rainbow(island/float(len(islandlist)))
-	ax.scatter(feature[:,1], feature[:,0], color=color,s=2, lw=0, label='%d' % (rad*dx))
+	ax.scatter(feature[:,1], feature[:,0],s=2, lw=0, label='%d' % (rad*dx))
 
 	theta = np.rad2deg(np.arctan2(feature[:,0] - centre[0], feature[:,1] - centre[1]))
 	theta[theta < 0] += 360
@@ -54,17 +53,8 @@ def make_profile(temp_img, other_img, islandlist, island, label, centre, ax, ax1
 	except ValueError:
 		startind = 0
 	profile = profile[startind:]
-	ax1.plot(np.arange(len(profile)), profile,label=label, color=color, lw=2)
-	ymin, ymax = ax1.get_ylim()
-	# ax1.vlines(rad - startind, ymin, ymax, color=color, linestyle='dotted')
-	
-	wedge = other_img*grid.T
-	wedge[wedge == 0] = np.nan
-	profile = radial_profile(wedge, centre)
-	profile = profile[startind:]
-	ax2.plot(np.arange(len(profile)), profile,label=label, color=color, lw=2)
-	ymin, ymax = ax2.get_ylim()
-	# ax2.vlines(rad - startind, ymin, ymax, color=color, linestyle='dotted')	
-
-	#ok now actually run it this way for a feature
-
+	if ax1:
+		ax1.plot(np.arange(len(profile)), profile,label=label, color=color, lw=2)
+		ymin, ymax = ax1.get_ylim()
+	if ret:
+		return profile 

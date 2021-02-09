@@ -5,8 +5,7 @@
 import numpy as np
 from scipy.ndimage import gaussian_gradient_magnitude
 
-def find_points_above(img, islandlist, island, mincontrast=1, gwidth=1, type='sb'):
-    feature = islandlist[island]
+def find_points_above(img,feature, mincontrast=1, gwidth=1, type='sb'):
     points = np.array([feature.lines[0].pixlist[0].rawx, feature.lines[0].pixlist[0].rawy])
     for line in feature.lines:
         for pix in line.pixlist:

@@ -10,6 +10,8 @@ Once the simulation has run, use make_fits.py to generate FITS files of the temp
 
 If you want off-axis images, specify the normal vector to your plane of interest in the make_fits function. 
 
+#By default, these files are saved to fitsfiles/temperature, fitsfile/rhoproj, fitsfile/potential and fitsfile/photon_emissivity, so create these directories within the simulation directory before running make_fits.py#.
+
 3. Find BCGs
 bcg_dist.py finds the two potential minima in the gravitational potential slice, with a minimum separation as specified input. If ret_peaks = True, it returns the pixel coordinates of the two minima. Otherwise, it returns the distance between them in kpc. This is a sensitive measure of the dynamical time. 
 *If available and well-identified*, use observed positions of BCGs to select best-fit time in the simulation. If not, see measuring X-ray observables below.
@@ -33,5 +35,10 @@ ii) distance of peak of upstream shock from BCG in cold front
 iii) separation between cold front and bow shock, aka shock separation
 *If BCG positions not well-observed*, the separation between the upstream shock and the BCG in the cold front/substructure is a good proxy for dynamical time. Match this to X-ray observations to select the best fit time. 
 
+### Optional ###
+
 8. Measure profiles
-make_profiles.py takes in two FITS image (temperature plus anything else) and an island generated in make_islands.py. The image center can be specified as either the X-ray center or the radius of curvature of the given feature. make_profile then makes a wedge from from the center to the feature and computes the radial profiles of two FITS images across it. Optionally, the input can include Matplotlib axes onto which 
+make_profiles.py takes in two FITS image (temperature plus anything else) and an island generated in make_islands.py. The image center can be specified as either the X-ray center or the radius of curvature of the given feature. make_profile then makes a wedge from from the center to the feature and computes the radial profiles of two FITS images across it. Optionally, the input can include Matplotlib axes onto which the profiles are plotted.
+
+9. Lensing quantities
+The projected density maps 

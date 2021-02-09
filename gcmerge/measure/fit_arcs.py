@@ -3,9 +3,9 @@
 ##############################
 
 import numpy as np
-from scipy import optimize
 import gc
 from points_above_gradient import find_points_above
+from scipy import optimize
 
 def calc_R(x,y, xc, yc):
     """ calculate the distance of each 2D points from the center (xc, yc) """
@@ -28,7 +28,7 @@ def leastsq_circle(x,y):
     residu   = np.sum((Ri - R)**2)
     return xc, yc, R, residu
 
-def fit_arc(img, islandlist, island, verbose=False):
+def fit_arc(img, island, verbose=False):
 	i = -1
 	arcfit = np.empty((18,6))
 	for mincontrast in np.arange(.9,0,-.05):
@@ -36,7 +36,7 @@ def fit_arc(img, islandlist, island, verbose=False):
 		arcfit[i,0] = mincontrast
 		try:
 			#select n points on either side of the central point
-			feature = find_points_above(img, islandlist, island, mincontrast)[:,0]
+			feature = find_points_above(img, island, mincontrast)[:,0]
 			#this function is in islands.py
 			xdata = feature[:,1]
 			ydata = feature[:,0]

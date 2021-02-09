@@ -2,25 +2,18 @@
 ## Make FITS files, compare them to obs, and save comparisons ##
 ################################################################
 
-import glob, os, yt 
+import glob
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy import cosmology
 import astropy.units as u
 from astropy.io import fits
 from astropy.wcs import utils, WCS
-from bcg_dist import find_peak
-from make_profiles import make_islands, select_feature, make_profiles
-
 from astropy.constants import G, c 
+from bcg_dist import find_peak
+from make_islands import make_islands
+from measure_feature import select_feature, standoff_distance, upstream_shock_bcg
 
-# dirs = glob.glob('*e1*/*/*/*/*/*/*/fitsfiles')
-dirs = ['1.1e15_3e14/c1=4.1/a1=1/c2=5.2/a2=1.0/vrel=1852/b=250',
-'9e14_2.4e14/c1=4.1/a1=2/c2=5.2/a2=1.0/vrel=1652/b=250',
-'9e14_2.4e14/c1=4.1/a1=2/c2=5.2/a2=1.0/vrel=2200/b=250',
-'6e14_2.1e14/c1=4.1/a1=1/c2=5.2/a2=1.0/vrel=2200/b=250',
-'4e14_2.1e14/c1=4.1/a1=1/c2=5.2/a2=1.0/vrel=2200/b=250',
-'2e14_2.1e14/c1=4.1/a1=1/c2=5.2/a2=1.0/vrel=2200/b=250']
 
 lcdm=cosmology.Planck15
 cosmo = cosmology.default_cosmology.get()
@@ -39,7 +32,6 @@ def einstein_radius(cosmo, M, zl, zs):
 #einstein_radius(cosmo, 4e14*u.Msun, 0.2323, 1) = 101 kpc
 
 homedir = '/gpfs/loomis/project/fas/nagai/uc24/a2146_gamer/' #on Grace
-# on wiluna: '/charra/uchadaya/GAMER/'
 
 obsfile = homedir+'ff.img.e300_7000_bin3_all_obsids_box_excl_point_sources.fits'
 errfile = homedir+'ff.img.e300_7000_bin3_all_obsids_box_0s_to_1s_no_bkg_subtr2_thresh.fits'
@@ -64,92 +56,82 @@ def distance(dir, ax, label, color):
 	potfiles = glob.glob(dir+'/potential/*.fits')
 	potfiles.sort()
 	
-	x = []
-	dists = []
+	dists = np.zeros((len(potfiles),2))
 
-	for file in potfiles:
+	for i in range(len(potfiles)):
 		try: 
 			dist=find_peak(file) #kpc
 		except TypeError:
 			dist = np.nan
-		dists.append(dist)
-		x.append(int(file.split('_')[-1].split('.fits')[0]))
-	
-	ax.plot(x, dists, label=label, c=color)
-	return ax
-	
+		dists[i,0] = i
+		dists[i,1] = dist
+	dists = dists[dists[:,0] > 0]
+	np.save('distance', dists)
 
 #3 - shift, rotate, make profiles
 
-def compare_arrays(potfile, xrayfile, tempfile, bcg1_pix=None, bcg2_pix=None, offset=0, minlen_kpc=500):
-	islandlist, temp_img, sb_img, xraypeak = make_islands(potfile, xrayfile, tempfile, bcg1_pix, bcg2_pix)
+def summary_statistics(potfile, xrayfile, tempfile, edgecontrast=None, minlen_kpc=500):
+	#selections by contrast 
+	#also default xrange yrange select central 400pix ~ 2.4Mpc of image
+	islandlist, temp_img, xraypeak = make_islands(xrayfile=xrayfile, tempfile=tempfile, edgecontrast=edgecontrast)
 	print ("islands made")
 
-	dx = fits.getheader(potfiles[0])['CDELT1']
+	dx = fits.getheader(tempfile)['CDELT1']
 	fig, ax = plt.subplots()
 
 	plt.imshow(temp_img, origin = 'lower', cmap = cm.afmhot, norm=colors.Normalize(1,20))
 
-	fig1, ax1 = plt.subplots()
-	fig2, ax2 = plt.subplots()
+	for i in range(len(islandlist)):
+		features = {}
+		#selection by length
+		if islandlist[i].count() > minlen_kpc/dx:
+			print(isle)
+			f, r, c = select_feature(temp_img, sb_img, islandlist, isle)
+			plt.scatter(f[:,1], f[:,0], label=i)
+			features[i] = f 
+	plt.legend()
 
-	for isle in islandlist:
-		if isle.count() > minlen_kpc/dx:
-			print( isle)
-			make_profile(temp_img.T,sb_img.T, islandlist, islandlist.index(isle),label=str(islandlist.index(isle)),centre='arc', ax=ax, ax1=ax1, ax2=ax2)
+	if len(features.keys()) > 3:
+		p1, p2 = find_peak(potfile, ret_peaks=False) #BCGs of clusters 1 and 2
+		
+		#so p2 is the bcg we're referring to
+		#now what's "left" vs "right" of bcg? remember coordinates are in (y, x)
+		left = []
+		dist_bcg = np.zeros((2,4))
+		i = 0
 
-			#but the profiles currently start at r=0. instead, need to focus on the peak
+		if len(features.keys() > 4):  #select four longest features
+			length = np.zeros(len(features.keys()))
+			for key in features.keys():
+				feature = feature[key]
+				if feature[:,1].mean() < p2[1]: #left of image
+					left.append(key)
+				length[key] = len(feature)			
+			
+			longest = [np.argsort(length)[::-1]][:4]
 
+			for key in longest:
+				dist = np.linalg.norm(np.mean(features[key], axis=0) - p2)
+				dist_bcg[i] = [key, dist]
+				i += 1
+		else: #only four features to start with
+			for i in range(4):
+				dist = np.linalg.norm(np.mean(features[key], axis=0) - p2)
+				dist_bcg[i] = [i, dist]
 
-	print("profiles made")
+		dist_bcg = dist_bcg[np.argsort(dist_bcg[:,1])] #nearest to farthest
 
-	handles, labels = ax1.get_legend_handles_labels()
-	ax1.set_xlim(0,150)
-	loc = ax1.get_xticks()
-	xlabels = loc*fits.getheader(tempfiles[filenum])['CDELT1']
-	ax1.set_xticks(loc[::2])
-	ax1.set_xticklabels(['%d' % x for x in xlabels[::2]])
-	ax1.set_xlabel('R (kpc)')
-	ax1.set_ylabel('kT (keV)')
-	fig1.legend(handles, labels)
-	fig1.savefig('temperature_profiles_%d.png' % (filenum+offset))
+		cf_ind, bs_ind = dist_bcg[:,0][dist_bcg[:,0] in left] #sorted by distance, features on the left
+		spur_ind, us_ind = dist_bcg[:,0][dist_bcg[:,0] not in left] #sorted by distance, features on the right
 
-	ax2.set_xlim(0,150)
-	loc = ax2.get_xticks()
-	xlabels = loc*fits.getheader(tempfiles[filenum])['CDELT1']
-	ax2.set_xticks(loc[::2])
-	ax2.set_xticklabels(['%d' % x for x in xlabels[::2]])
-	ax2.set_xlabel('R (kpc)')
-	ax2.set_ylabel(r'Photon emissivity (cts cm$^{-3} s^{-1}$)')
-	fig2.legend(handles, labels)
-	ax2.set_yscale('log')
-	fig2.savefig('xraysb_profiles_%d.png' % (filenum+offset))
-	print("formatting complete")
-	print(filenum+offset, " done")
+		#ok i think this should work
+		standoff 	 = standoff_distance(features[cf_ind], features[bs_index], dx = dx)
+		upstream_bcg = upstream_shock_bcg(features[us_ind], bcg_xy=p2, dx=dx)
+		
+		return fig, ax, cf_ind, bs_ind, us_ind, p2, standoff, upstream_bcg
+	else:
+		print("Too few features detected at this snapshot")
 
+#ok take a break then come back and test thisn
 
-def distances(ndirs, colormap):
-	fig, ax = plt.subplots()
-	for dir in ndirs:
-		M = dir.split('_')[0]
-		c1 = dir.split('c1=')[1].split('/')[0]
-		a1 = dir.split('a1=')[1].split('/')[0]
-		c2 = dir.split('c2=')[1].split('/')[0]
-		a2 = dir.split('a2=')[1].split('/')[0]
-		vrel = dir.split('vrel=')[1].split('/')[0]
-		b = dir.split('b=')[1].split('/')[0]
-		# label = '%s, c1=%s, a1=%s, c2=%s, a2=%s' % (M, c1, a1, c2, a2)
-		label = '%s' % M
-		if '2200' in vrel:
-			label+=', vrel=2200'
-		if '100' in b:
-			label+=', b=100'
-		ax = distance(dir, ax, label, colormap(float(ndirs.index(dir))/len(ndirs)))
-
-	plt.hlines(470, 9,16,color='k',linestyle='dotted')
-	plt.hlines(420, 9,16,color='k',linestyle='dotted')
-	plt.xlim(9,16)
-	plt.ylim(1e2,1e3)
-	xtix = plt.xticks()[0]
-	plt.xticks(xtix, ['%0.1f' % x for x in xtix/10.])
-	plt.legend(loc=9,ncol=2, fontsize=12)
+	
