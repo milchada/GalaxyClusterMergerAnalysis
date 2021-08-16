@@ -118,27 +118,14 @@ if __name__ == "__main__":
     colors = ['tab:blue', 'tab:green', 'tab:orange']
     linestyles = ['solid', 'dashed', 'dotted']
     dirs = ['beta=50', 'beta=50/turnoff_at_0_7Gyr', 'beta=inf']
-    main(dirs, colors, 'turbulence_comparison_beta50_k3.png', nd=False, exp = 3, ymax=1e5)
+    main(dirs, colors, 'turbulence_comparison_beta50_k4.png', nd=False, exp = 4, ymax=1e5)
     gc.collect(); gc.collect(); gc.collect()
-    main(dirs, linestyles, 'turbulence_comparison_3d_beta50_k3.png', nd=True, exp=3, ymax=1e5)
+    main(dirs, linestyles, 'turbulence_comparison_3d_beta50_k4.png', nd=True, exp=4, ymax=1e5)
     gc.collect(); gc.collect(); gc.collect()
-    main(dirs, linestyles, 'turbulence_comparison_3d_beta50_k4.png', nd=True, exp=4, ymax=1e2)
-    gc.collect(); gc.collect(); gc.collect()
-    main(dirs, colors, 'turbulence_comparison_beta50_k4.png', nd=False, exp = 4, ymax=1e2)
-    gc.collect(); gc.collect(); gc.collect()
-
     
     dirs = ['beta=inf','beta=200', 'beta=100', 'beta=50']
     colors = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red']
-    main(dirs, colors, 'turbulence_comparison_allbeta_k3.png', nd=False, exp=3, ymax=1e5)
-    gc.collect(); gc.collect(); gc.collect()
     main(dirs, colors, 'turbulence_comparison_allbeta_k4.png', nd=False, exp=4, ymax=1e2)
     gc.collect(); gc.collect(); gc.collect()
-    main(dirs, colors, 'turbulence_comparison_allbeta.png', nd=False, exp=0, ymax=1e12)
-    gc.collect(); gc.collect(); gc.collect()
-    main(dirs, linestyles, 'turbulence_comparison_3d_allbeta_k3.png', nd=True,exp=3, ymax=1e5)
-    gc.collect(); gc.collect(); gc.collect()
     main(dirs, linestyles, 'turbulence_comparison_3d_allbeta_k4.png', nd=True,exp=4, ymax=1e2)
-    gc.collect(); gc.collect(); gc.collect()
-    main(dirs, linestyles, 'turbulence_comparison_3d_allbeta.png', nd=True,exp=0, ymax = 1e12)
     gc.collect(); gc.collect(); gc.collect()
