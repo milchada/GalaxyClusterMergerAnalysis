@@ -29,31 +29,21 @@ concentration.py takes in a FITS image of projected density and a slice of gravi
 
 turbulence_Pk.py takes as input a simulation snapshot and coordinates for a region of interest. Within this region, it interpolates velocities onto a regular grid, and then computes the power spectrum of these velocities. Useful diagnostic of levels of bulk and turbulent movements.
 
-### In Development ###
-
-5. Find and group edges
+6. Find and group edges
 
 find_features.py uses Cauchy edge detection to identify sharp features in the images. It returns a list of pixel points associated with any edge in the image.
 islands.py sets up object classes used to sort these pixels into contiguous features.
 make_islands.py actually takes in the point list from find_features and sorts them into islands.
 
-6. Fit arcs to features
+7. Fit arcs to features
 
 For a given island (set of points), find_points_above.py selects a subset whose contrast with their background exceeds the input threshold. Thus, a high threshold means fewer points around the sharpest part of the feature, and a low threshold goes further out. 
 fit_arcs.py sequentially lowers the threshold from 0.9 to 0.1 (normalised to the maximum value for the given set) and fits a circular arc to each resulting subset of points. It outputs the selected points, plus best fit radius, center of curvature, and reduced chi-sq of each fit. 
-
-Unfortunately, the edge_detection algorithms find a few features that would not be deemed important by the human eye. I don't yet have a way to match the features to observed ones. However, the longest ones will be the ones observed. For example, the two shocks, the cold front, and the disrupted core of the main cluster will be the four longest edges. Currently, the best way to decide which is which is unfortunately manual inspection of the snapshots.
-
-7. Measure X-ray observables
-
-measure_feature.py selects features, fits arcs to them, and outputs three key X-ray observables:
-i) radius of curvature of the cold front
-ii) distance of peak of upstream shock from BCG in cold front
-iii) separation between cold front and bow shock, aka shock separation
-*If BCG positions not well-observed*, the separation between the upstream shock and the BCG in the cold front/substructure is a good proxy for dynamical time. Match this to X-ray observations to select the best fit time. 
-
 
 8. Measure profiles
 
 make_profiles.py takes in two FITS image (temperature plus anything else) and an island generated in make_islands.py. The image center can be specified as either the X-ray center or the radius of curvature of the given feature. make_profile then makes a wedge from from the center to the feature and computes the radial profiles of two FITS images across it. Optionally, the input can include Matplotlib axes onto which the profiles are plotted.
 
+### In Development ###
+
+Unfortunately, the edge_detection algorithms find a few features that would not be deemed important by the human eye. I don't yet have a way to match the features to observed ones. However, the longest ones will be the ones observed. For example, the two shocks, the cold front, and the disrupted core of the main cluster will be the four longest edges. Currently, the best way to decide which is which is unfortunately manual inspection of the snapshots.
