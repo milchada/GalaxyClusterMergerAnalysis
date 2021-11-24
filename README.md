@@ -1,4 +1,4 @@
-################################## PLEASE NOTE: THIS BRANCH IS FOR MY PERSONAL USE ##################################
+########################## PLEASE NOTE: THIS BRANCH IS FOR MY PERSONAL USE ##########################
 
 This package allows you to design, run, and analyse simulations of mergers of galaxy clusters.
 
