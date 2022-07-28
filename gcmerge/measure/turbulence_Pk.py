@@ -66,66 +66,100 @@ def image_powerspec(data, Lx, Ly, Lz):
 
     return k[Pk > 0], Pk[Pk > 0]
 
-def plot(ds, c = [7., 7., 7.], halfwidth = 0.25, ax = None, linestyle='solid', retimg=False, nd=True, color='k', exp=0):
-    grid = ds.r[(c[0]-halfwidth,"Mpc"):(c[0]+halfwidth,"Mpc"):256j,
-                (c[1]-halfwidth,"Mpc"):(c[1]+halfwidth,"Mpc"):256j,
-                (c[2]-halfwidth,"Mpc"):(c[2]+halfwidth,"Mpc"):256j]
+def plot(ds, c = [7., 7., 7.], halfwidth = 0.25, ncell=256j, ax = None, linestyle='solid', retimg=False, x=False, y=False, z = False, all=True, color='k', exp=0, field='velocity', units='km/s', label='v'):
+    grid = ds.r[(c[0]-halfwidth,"Mpc"):(c[0]+halfwidth,"Mpc"):ncell,
+                (c[1]-halfwidth,"Mpc"):(c[1]+halfwidth,"Mpc"):ncell,
+                (c[2]-halfwidth,"Mpc"):(c[2]+halfwidth,"Mpc"):ncell]
     width_kpc = halfwidth*2000.
     if not ax:
         fig, ax = plt.subplots(figsize=(10,10))
-    vx = grid["gas", "velocity_x"].to_value('km/s')
-    vy = grid["gas", "velocity_y"].to_value('km/s')
-    vz = grid["gas", "velocity_z"].to_value('km/s')
-    k, vxk = image_powerspec(vx, width_kpc, width_kpc, width_kpc)
-    k, vyk = image_powerspec(vy, width_kpc, width_kpc, width_kpc)
-    k, vzk = image_powerspec(vz, width_kpc, width_kpc, width_kpc)
-    if nd:
-        ax.loglog(k, vxk*pow(k,exp), label="v$_x$", linestyle = linestyle, c='tab:blue')
-        ax.loglog(k, vyk*pow(k,exp), label="v$_y$", linestyle = linestyle, c='tab:green')
-        ax.loglog(k, vzk*pow(k,exp), label="v$_z$", linestyle = linestyle, c='tab:orange')
-            
-    else:
-        #vmag = grid["gas", "velocity_magnitude"].to_value('km/s')
-        #k, vk = image_powerspec(vmag, width_kpc, width_kpc, width_kpc)
-        ax.loglog(k, (vxk+vyk+vzk)*pow(k,exp), label="v$_{\rm mag}$", c=color)
-        
-    ax.set_xlabel("k (kpc$^{-1}$)")
-    if exp:
-        ax.set_ylabel("P(k)$\times$ $k^%d$ (km$^2$ s$^{-2}$ kpc$^{3}$)" % exp)
-    else:
-        ax.set_ylabel("P(k) (km$^2$ s$^{-2}$ kpc$^{3}$)")
-    if retimg:
-        return ax
+    if x:
+        vx = grid["gas", field+"_x"].to_value(units)
+        kx, vxk = image_powerspec(vx, width_kpc, width_kpc, width_kpc)
+        ax.loglog(kx, vxk*pow(kx,exp), label=label+"$_x$", linestyle = linestyle, c=x)
+    if y:
+        vy = grid["gas", field+"_y"].to_value(units)
+        ky, vyk = image_powerspec(vy, width_kpc, width_kpc, width_kpc)
+        ax.loglog(ky, vyk*pow(ky,exp), label=label+"$_y$", linestyle = linestyle, c=y)
+    if z:
+        vz = grid["gas", field+"_z"].to_value(units)
+        kz, vzk = image_powerspec(vz, width_kpc, width_kpc, width_kpc)
+        ax.loglog(kz, vzk*pow(kz,exp), label=label+"$_z$", linestyle = linestyle, c=z)
+    if all:
+        vmag = grid["gas", field+"_magnitude"].to_value(units)
+        k, vk = image_powerspec(vmag, width_kpc, width_kpc, width_kpc)
+        ax.loglog(k, (vk)*pow(k,exp), label=label+"$_{\rm mag}$", c=color)
     
-def main(dirs, linestyles, figname, c = 'potmin', halfwidth = 0.25, retimg=False, nd=True, exp = 0, ymax=1e12):
+    ax.set_xlabel(r"k (kpc$^{-1}$)", fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    if retimg:
+        return fig, ax
+    
+def overtime(dir, ax, halfwidth = 0.5, ncell=512j, x=False, y=False, z = False, all=True, exp=0, field='velocity', units='km/s', label='v',
+    snaps = ['Data_000000', 'Data_000085', 'Data_000170', 'Data_000180', 'Data_000200']):
+    colors = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red', 'tab:purple']
+    for s, col in zip(snaps, colors[:len(snaps)]):
+        ds = yt.load(dir+'/'+s)
+        _, c = ds.find_min(("gamer", "Pote"))
+        plot(ds, ax=ax, c = c.value, linestyle='solid', color=col, field=field, units=units, label=label)
+
+fig, ax = plt.subplots()
+overtime('beta=50',ax=ax, field='magnetic_field', units='G', label='B')
+# ax.vlines(1/6.8, 1e3, 1e10, color='k', linestyle='dotted')
+ax.set_xlim(.008,.1)
+# ax.set_ylim(1e2,1e10)
+plt.ylabel(r"P(k)$\times k^3$", fontsize=14)
+plt.tight_layout()
+fig.savefig('/home/uc24/PkB_t_beta50.png')
+ax.cla()
+overtime('beta=inf',ax=ax, field='magnetic_field', units='G', label='B')
+# ax.vlines(1/6.8, 1e3, 1e10, color='k', linestyle='dotted')
+ax.set_xlim(.008,.1)
+# ax.set_ylim(1e2,1e10)
+plt.ylabel(r"P(k)$\times k^3 $", fontsize=14)
+plt.tight_layout()
+fig.savefig('/home/uc24/PkB_t_hydro.png')
+ax.cla()
+overtime('beta=50/turnoff_85',ax=ax, field='magnetic_field', units='G', label='B')
+# ax.vlines(1/6.8, 1e3, 1e10, color='k', linestyle='dotted')
+ax.set_xlim(.008,.1)
+# ax.set_ylim(1e2,1e10)
+plt.ylabel(r"P(k)$\times k^3$", fontsize=14)
+plt.tight_layout()
+fig.savefig('/home/uc24/PkB_t_turb.png')
+
+def main(dirs, linestyles, figname,snapname='/Data_000180', c = 'potmin', halfwidth = 0.25, retimg=False, all=True, exp = 0, ymin=0.2,ymax=1e12, field='velocity', units='km/s', label='v'):
     fig, ax = plt.subplots(figsize=(10,10))
     for (dir, ls) in zip(dirs, linestyles):
-        ds = yt.load(dir+'/Data_000156') #make sure this file is correctly named in each dir
+        ds = yt.load(dir+snapname) #make sure this file is correctly named in each dir
         if c == 'potmin':
             _, c = ds.find_min(("gamer","Pote"))
             c = c.value
         elif c == 'c':
             c = [7., 7., 7.]
         if nd:
-            plot(ds, ax=ax, nd=True, linestyle=ls, c = c, halfwidth = halfwidth, retimg=retimg, exp=exp)
+            plot(ds, ax=ax, all=all, linestyle=ls, c = c, halfwidth = halfwidth, retimg=retimg, exp=exp, field=field, units=units, label=label)
         else:
-            plot(ds, ax=ax, nd=False, color=ls, c = c, halfwidth = halfwidth, retimg=retimg,exp=exp)
+            plot(ds, ax=ax, all=all, color=ls, c = c, halfwidth = halfwidth, retimg=retimg,exp=exp, field=field, units=units, label=label)
     ax.set_xlim(3e-3,0.5)
-    ax.set_ylim(0.2, ymax)
+    ax.set_ylim(ymin, ymax)
     fig.savefig('/home/uc24/'+figname)
+    if retimg:
+        return fig, ax
 
 if __name__ == "__main__":
     colors = ['tab:blue', 'tab:green', 'tab:orange']
     linestyles = ['solid', 'dashed', 'dotted']
-    dirs = ['beta=50', 'beta=50/turnoff_at_0_7Gyr', 'beta=inf']
-    main(dirs, colors, 'turbulence_comparison_beta50_k4.png', nd=False, exp = 4, ymax=1e5)
+    dirs = ['beta=50', 'beta=50/turnoff_85', 'beta=inf']
+    fig, ax = main(dirs, colors, 'Pk_beta50_k4.png', nd=False, exp = 4, ymax=1e2, snapname='/Data_000180')
     gc.collect(); gc.collect(); gc.collect()
-    main(dirs, linestyles, 'turbulence_comparison_3d_beta50_k4.png', nd=True, exp=4, ymax=1e5)
+    fig, ax = main(dirs[0], linestyles[0], 'beta50_Pk_B.png', nd=True, exp = 1, ymin=1e-16, ymax=1e-8, snapname='/Data_000180', field='magnetic_field', units='G', label='B')
     gc.collect(); gc.collect(); gc.collect()
-    
-    dirs = ['beta=inf','beta=200', 'beta=100', 'beta=50']
-    colors = ['tab:blue', 'tab:green', 'tab:orange', 'tab:red']
-    main(dirs, colors, 'turbulence_comparison_allbeta_k4.png', nd=False, exp=4, ymax=1e2)
+
+    dirs = ['beta=200', 'beta=100', 'beta=50'] #'beta=inf',
+    colors = ['tab:green', 'tab:orange', 'tab:red'] #'tab:blue', 
+    fig, ax = main(dirs, colors, 'Pk_allbeta.png', nd=False, exp=4, ymax=1e2, snapname='/Data_000180')
     gc.collect(); gc.collect(); gc.collect()
-    main(dirs, linestyles, 'turbulence_comparison_3d_allbeta_k4.png', nd=True,exp=4, ymax=1e2)
+    fig, ax = main(dirs, colors, 'allbeta_Pk_B.png', nd=False, exp = 1, ymin=1e-16, ymax=1e-8, snapname='/Data_000180', field='magnetic_field', units='G', label='B')
     gc.collect(); gc.collect(); gc.collect()

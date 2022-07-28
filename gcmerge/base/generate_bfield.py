@@ -2,23 +2,44 @@ import cluster_generator as cg
 import numpy as np
 import glob
 
-profs = ['sNFW_profile_m1.6e+14_c5.0_a2.0rs0.6rvir_rc0.1rvir_beta0.67_eps2.h5',
-	 'sNFW_profile_m5.0e+14_c5.0_a2.0rs0.6rvir_rc0.1rvir_beta0.67_eps2.h5']
+with open('Input__TestProb') as f:
+    a = f.readlines()
+
+for line in a:
+    if 'Merger_Coll_PosX1' in line:
+        x1 = float(line.split('PosX1 ')[1].split('\t')[0])
+    if 'Merger_Coll_PosY1' in line:
+        y1 = float(line.split('PosY1 ')[1].split('\t')[0])
+    if 'Merger_Coll_PosX2' in line:
+        x2 = float(line.split('PosX2 ')[1].split('\t')[0])
+    if 'Merger_Coll_PosY2' in line:
+        y2 = float(line.split('PosY2 ')[1].split('\t')[0])
+    if 'Merger_File_Prof1' in line:
+        profs.append(line.split('       ')[1].split(' \t')[0])
+    if 'Merger_File_Prof2' in line:
+        profs.append(line.split('       ')[1].split('\t')[0])
+
 p1 = cg.ClusterModel.from_h5_file(profs[0])
 p2 = cg.ClusterModel.from_h5_file(profs[1])
 
-beta = 200.0
+beta = 100.0
 
 p1.set_magnetic_field_from_beta(beta, gaussian=False)
 p2.set_magnetic_field_from_beta(beta, gaussian=False)
 
 
 buffer = 200.0
+ctr1 = np.array([x1,y1,7000.0])
+ctr2 = np.array([x2,y2,7000.0])
+
+with open('Input__Parameter') as f: a = f.readlines()
+for line in a:
+    if 'BOX_SIZE' in line:
+        size = 1000*float(line.split('BOX_SIZE                      ')[1].split(' ')[0])
+        #Mpc to kpc
 
 left_edge = np.array([0.0]*3)-buffer
-right_edge = np.array([14.0e3]*3)+buffer
-ctr1 = np.array([8552.0,7000.0,7000.0])
-ctr2 = np.array([5552.26,7100.0,7000.0])
+right_edge = np.array([size]*3)+buffer
 
 dims = (256,)*3
 

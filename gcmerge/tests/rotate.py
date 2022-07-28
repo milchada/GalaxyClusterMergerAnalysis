@@ -4,9 +4,7 @@ import numpy as np
 def rotate_proj(ds, snapnum, theta=0, phi=0, width=(1,'Mpc')):
 	t = np.deg2rad(theta)
 	p = np.deg2rad(phi)
-	n = [np.sin(t)*np.cos(p), np.sin(t)*np.sin(p), np.cos(t)]
-	# n = [np.cos(theta)*np.sin(phi), -np.sin(theta), np.cos(theta)*np.cos(phi)]
-	
+	n = [np.sin(t)*np.cos(p), -np.sin(t)*np.sin(p), np.cos(t)]
 	s = yt.FITSOffAxisProjection(ds, normal=n, fields=('gas', 'temperature'), center='c', weight_field='mazzotta_weighting', width=width)
 	s.writeto('snapnum_%d_theta_%d_phi%d_temp.fits' % (snapnum, theta, phi))
 
